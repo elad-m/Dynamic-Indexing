@@ -22,22 +22,36 @@ public class Main {
         final String indexDirectory = localDir + File.separatorChar + INDEXES_DIR_NAME;
         final String insertionDirectory = localDir + File.separatorChar + INSERTION_DIR_NAME;
 
-        testInsertion(indexDirectory, insertionDirectory);
-        deleteIndex(indexDirectory);
+        test(indexDirectory, insertionDirectory);
+//        removeIndex(indexDirectory);
     }
 
-    private static void testInsertion(String indexDirectory, String insertionDirectory) {
+    private static void test(String indexDirectory, String insertionDirectory) {
         printDateAndTime();
         ScalingCases scalingCases = new ScalingCases(INPUT_SCALE, insertionDirectory);
         createTestLog(indexDirectory, scalingCases.getTestType());
 
-        IndexWriter indexWriter = new IndexWriter(INPUT_SCALE);
-        buildIndex(indexWriter, indexDirectory, scalingCases.getInputFilename());
-        insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
+        IndexWriter indexWriter = new IndexWriter(indexDirectory, INPUT_SCALE);
+//        buildIndex(indexDirectory, indexWriter, scalingCases.getInputFilename());
 
+//        insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
         IndexReader indexReader = new IndexReader(indexDirectory);
-        queryWordIndex(indexReader, scalingCases);
+//        queryWordIndex(indexReader, scalingCases);
+//        deleteReviews(indexDirectory, indexWriter, scalingCases);
+        mergeIndex(indexDirectory, indexWriter);
+//        queryAfterDelete(indexReader, scalingCases);
+
         tlog.close();
+    }
+
+    private static void mergeIndex(String indexDirectory, IndexWriter indexWriter) {
+        System.out.println("=====\n" + "Merging All Indexes " + "\n=====");
+        indexWriter.merge(indexDirectory);
+    }
+
+    private static void deleteReviews(String indexDirectory, IndexWriter indexWriter, ScalingCases scalingCases) {
+        System.out.println("=====\n" + "Index deletion " + "\n=====");
+        indexWriter.delete(indexDirectory, scalingCases.getDelReviews());
     }
 
     private static void insertToIndex(String indexDirectory, IndexWriter indexWriter,
@@ -83,8 +97,11 @@ public class Main {
         testGetReviewsWithToken(indexReader, scalingCases.getNegWordQueries());
         tlog.println("words inserted queries...");
         testGetReviewsWithToken(indexReader, scalingCases.getInsertQueries());
-//        String[] t = {"lusso"};
-//        testGetReviewsWithToken(indexReader, t);
+    }
+
+    private static void queryAfterDelete(IndexReader indexReader, ScalingCases scalingCases) {
+        tlog.println("words after deleted reviews ...");
+        testGetReviewsWithToken(indexReader, scalingCases.getDelQueries());
     }
 
     private static void testGetReviewsWithToken(IndexReader indexReader,
@@ -96,12 +113,12 @@ public class Main {
         }
     }
 
-    private static void deleteIndex(String indexDirectoryName) {
+    private static void removeIndex(String indexDirectoryName) {
         IndexRemover indexRemover = new IndexRemover();
         indexRemover.removeIndex(indexDirectoryName);
     }
 
-    private static void buildIndex(IndexWriter indexWriter, String indexDirectoryName, String rawDataFilename) {
+    private static void buildIndex(String indexDirectoryName, IndexWriter indexWriter,  String rawDataFilename) {
         long startTime = System.currentTimeMillis();
         indexWriter.write(rawDataFilename, indexDirectoryName);
         printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");

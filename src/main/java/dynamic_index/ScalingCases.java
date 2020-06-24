@@ -1,14 +1,15 @@
 package dynamic_index;
 
 import java.io.File;
-import java.io.FileFilter;
 
 @SuppressWarnings("SpellCheckingInspection")
 public class ScalingCases {
 
     final String[] e1 = {"friend", "0", "y"};
     final String[] ne1 = {"nonesenseeee","woordss"};
-    final String[] insertE1 = {"sset", "kindred", "romantic", "atmosphere", "hearted", "posh"};
+    final String[] inse1 = {"sset", "kindred", "romantic", "atmosphere", "hearted", "posh"};
+    final String[] delWordse1 = {"aaa", "friend", "romantic", "atmosphere", "hearted", "posh"};
+    final int[] delReviews1 = new int[]{1, 5, 10, 11, 13};
 
     final String[] e2InQueries = {"friend", "0", "asdfasdf"};
     final String[] e2NotInQuery = {"kookie", "storebaught", "nonesenseeee","woordss"};
@@ -55,13 +56,14 @@ public class ScalingCases {
 
     private String[] wordQueries = e1;
     private String[] negWordQueries = ne1;
-    private String[] insertQueries = insertE1;
+    private String[] insertQueries = inse1;
+    private String[] delQueries = delWordse1;
+    private int[] delReviews = delReviews1;
 
     final private int testType;
     final private String inputFilename;
     private final File insertDirectory;
     final private File[] insertFiles;
-    final private String deleteFileName;
 
     public ScalingCases(int eType, String insertionDirectory) {
         this.insertDirectory = new File(insertionDirectory);
@@ -72,13 +74,13 @@ public class ScalingCases {
                 negWordQueries = ne1;
                 inputFilename = MOVIE_REVIEWS_1;
                 insertFiles = getInsertFileNames();
-                deleteFileName = DELETE_1;
-                insertQueries = insertE1;
+                insertQueries = inse1;
+                delQueries = delWordse1;
+                delReviews = delReviews1;
                 break;
             default:
                 inputFilename = "";
                 insertFiles = new File[0];
-                deleteFileName = "";
                 System.err.println("check test input again");
                 break;
         }
@@ -113,12 +115,17 @@ public class ScalingCases {
         return insertFiles.length;
     }
 
-    public String getDeleteFileName(){
-        return deleteFileName;
-    }
 
     public String[] getInsertQueries() {
         return insertQueries;
+    }
+
+    public String[] getDelQueries() {
+        return delQueries;
+    }
+
+    public int[] getDelReviews() {
+        return delReviews;
     }
 }
 

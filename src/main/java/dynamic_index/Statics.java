@@ -14,7 +14,6 @@ public final class Statics {
 
     public static final int BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK = 8;
     public static final int WORDS_DEFAULT_MAX_TEMP_FILES = 1024;
-    public static final int PIDS_DEFAULT_MAX_TEMP_FILES = 256;
     public static final int STRING_BUILDER_DEFAULT_CAPACITY = 32;
 
     public static final int INTEGER_SIZE = Integer.BYTES;
@@ -24,8 +23,10 @@ public final class Statics {
     public static final String WORDS_FRONT_CODED_FILENAME = "wordsFrontCodedToPointers.bin";
     public static final String WORDS_INVERTED_INDEX_FILENAME = "wordsInvertedIndex.bin";
 
-    public static final String MAIN_INDEX_META_DATA_FILENAME = "mainIndexMetaData.bin";
+    public static final String MAIN_INDEX_META_DATA_FILENAME = "indexMetaData.bin";
     public static final String ALL_INDEXES_META_DATA_FILENAME = "allIndexesMetaData.bin";
+
+    public static final String INVALIDATION_VECTOR_FILENAME = "invalidationVector.bin";
 
     public static final String MERGE_FILES_DIRECTORY_NAME = "mergeFilesDirectory";
     public static final String WORDS_SORTED_FILE_NAME = "WORDS_SORTED.bin";
@@ -87,7 +88,7 @@ public final class Statics {
 
     public static int estimateBestSizeOfWordsBlocks(final long numOfTokens, final boolean withFreeMemory) {
         long estimatedSizeOfFile = numOfTokens * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
-        long blockSize = calculateSizeOfBlock(estimatedSizeOfFile, WORDS_DEFAULT_MAX_TEMP_FILES, withFreeMemory); // IN BYTES
+        long blockSize = calculateSizeOfBlock(estimatedSizeOfFile, WORDS_DEFAULT_MAX_TEMP_FILES); // IN BYTES
         long blockSizeInPairs = blockSize / 8;
         System.out.println("blockSize in BYTES:" + blockSize);
         System.out.println("blockSize in PAIRS:" + blockSizeInPairs);
@@ -95,20 +96,9 @@ public final class Statics {
         return (int) blockSizeInPairs;
     }
 
-    private static long calculateSizeOfBlock(final long sizeOfFile, final int maxtmpfiles, final boolean withFreeMemory) {
-        long blockSize;
+    private static long calculateSizeOfBlock(final long sizeOfFile, final int maxtmpfiles) {
         long baseSizeOfBlock = (long)Math.ceil((double)sizeOfFile / maxtmpfiles);
-
-        if (withFreeMemory) {
-            long freeMemory = estimateAvailableMemory();
-            blockSize = Math.max(freeMemory / 16, baseSizeOfBlock); //  for forth memory and 4 buffers
-        } else {
-            blockSize = baseSizeOfBlock;
-        }
-        if (blockSize == 0) {
-            System.err.println("block    size    is      0");
-        }
-        return Statics.roundUpToProductOfPairSize(blockSize);
+        return Statics.roundUpToProductOfPairSize(baseSizeOfBlock);
     }
 
     public static int roundUpToProductOfPairSize(long blockSize) {

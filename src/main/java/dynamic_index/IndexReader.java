@@ -2,15 +2,13 @@ package dynamic_index;
 
 import dynamic_index.index_reading.SingleIndexReader;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Vector;
+
 
 /**
  * Reads all indexes - main and auxiliaries if exist - and put the results together.
@@ -126,7 +124,8 @@ public class IndexReader {
     public Enumeration<Integer> getReviewsWithToken(String token) {
         TreeMap<Integer, Integer> unionOfResults = new TreeMap<>();
         //get main index results
-        SingleIndexReader singleIndexReader = new SingleIndexReader(mainIndexDictionary,
+        SingleIndexReader singleIndexReader =
+                new SingleIndexReader(mainIndexDictionary,
                 mainConcatString,
                 mainInvertedIndexFile,
                 mainNumOfWordsInFrontCodeBlock);
@@ -143,7 +142,27 @@ public class IndexReader {
             auxResults = singleIndexReader.getReviewsWithWord(token);
             addEnumerationToMap(auxResults, unionOfResults);
         }
+        filterInvalidatedRids(unionOfResults);
         return mapToEnumeration(unionOfResults);
+    }
+
+    private void filterInvalidatedRids(TreeMap<Integer, Integer> unionOfResults) {
+        try{
+            final String validationVectorFilename = mainIndexDirectory + File.separator + Statics.INVALIDATION_VECTOR_FILENAME;
+            BufferedInputStream validationVectorBIS = new BufferedInputStream( new FileInputStream(new File(validationVectorFilename)));
+
+            int byteRead = validationVectorBIS.read();
+            int byteCounter = 1;
+            while(byteRead != -1){
+                if(byteRead == 1){
+                    unionOfResults.remove(byteCounter);
+                }
+                byteRead = validationVectorBIS.read();
+                byteCounter++;
+            }
+        } catch(IOException e){
+            e.printStackTrace();
+        }
     }
 
     private Enumeration<Integer> mapToEnumeration(TreeMap<Integer, Integer> unionOfResults) {

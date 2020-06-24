@@ -5,22 +5,17 @@ import dynamic_index.external_sort.TermToReviewBlockWriter;
 import dynamic_index.index_writing.WordsIndexWriter;
 
 import java.io.*;
-import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.util.*;
 
 import static dynamic_index.Statics.*;
 
 public class IndexWriter {
 
-
     public static final int WORD_MAX_SIZE = 127;
-    public static final String WHITE_SPACE_SEPARATOR = " ";
     private static final String REVIEW_TEXT_FIELD = "review/text";
 
-    private File indexDirectory;
+    private String mainIndexDirectory;
+    private File currentIndexDirectory;
     private WordsIndexWriter wordsDataIndexWriter;
     private int numOfWordsInFrontCodeBlock = 8;
     private final Map<String, Integer> wordTermToTermID = new HashMap<>();
@@ -35,7 +30,8 @@ public class IndexWriter {
     private static final boolean READ_ALL_FILE = true; // when true the next line is ignored
     private static final int BATCH_SIZE_OF_REVIEWS_TO_READ = 1000000;
 
-    public IndexWriter(int inputScaleType) {
+    public IndexWriter(String indexDirectory, int inputScaleType) {
+        this.mainIndexDirectory = indexDirectory;
         this.inputScaleType = inputScaleType;
     }
 
@@ -66,7 +62,7 @@ public class IndexWriter {
 
 
     private void instantiateWriters() {
-        wordsDataIndexWriter = new WordsIndexWriter(indexDirectory);
+        wordsDataIndexWriter = new WordsIndexWriter(currentIndexDirectory);
     }
 
 
@@ -75,7 +71,7 @@ public class IndexWriter {
         if (!indexDirectory.mkdir()) {
             System.out.println("Directory 'index' already exists.");
         }
-        this.indexDirectory = indexDirectory;
+        this.currentIndexDirectory = indexDirectory;
     }
 
     /*
@@ -91,12 +87,12 @@ public class IndexWriter {
                 externalSort();
                 wordTermIdToTerm = swapHashMapDirections(wordTermToTermID);
             } else { // when skipping sorting
-                tokenCounter = getTokenCounter(indexDirectory, false);  // also token counter
-                reviewCounter = 1 + getReviewCounter(indexDirectory, false);
-                wordTermIdToTerm = loadMapFromFile(indexDirectory, WORDS_MAPPING);
+                tokenCounter = getTokenCounter(currentIndexDirectory, false);  // also token counter
+                reviewCounter = 1 + getReviewCounter(currentIndexDirectory, false);
+                wordTermIdToTerm = loadMapFromFile(currentIndexDirectory, WORDS_MAPPING);
             }
             System.gc();
-            constructIndexFromSorted(wordTermIdToTerm);
+            constructIndexFromSorted(wordTermIdToTerm, initialReviewCounter);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -104,7 +100,7 @@ public class IndexWriter {
     }
 
     private void writeHashmapFor100Random() {
-        writeHashmapToFile(wordTermToTermID, indexDirectory, WORDS_MAPPING, inputScaleType);
+        writeHashmapToFile(wordTermToTermID, currentIndexDirectory, WORDS_MAPPING, inputScaleType);
     }
 
     private void constructTermToTermIDMapping(String inputFile) throws IOException {
@@ -159,7 +155,7 @@ public class IndexWriter {
         long startTime = System.currentTimeMillis(); // words
         File mergeFilesDirectory = wordsTermToReviewBlockWriter.getMergeFilesDirectory();
         int blockSizeInPairs = wordsTermToReviewBlockWriter.getBLOCK_SIZE_IN_INT_PAIRS();
-        new ExternalMergeSort(Statics.WORDS_SORTED_FILE_NAME, indexDirectory, mergeFilesDirectory, blockSizeInPairs);
+        new ExternalMergeSort(currentIndexDirectory, mergeFilesDirectory, blockSizeInPairs);
         printElapsedTime(startTime, "Words Sort Merging");
     }
 
@@ -167,7 +163,7 @@ public class IndexWriter {
         System.out.println("First sort iteration...");
         long blockWriterStartTime = System.currentTimeMillis();
         BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
-        wordsTermToReviewBlockWriter = new TermToReviewBlockWriter(indexDirectory.getAbsolutePath(), tokenCounter, WORDS_MAPPING);
+        wordsTermToReviewBlockWriter = new TermToReviewBlockWriter(currentIndexDirectory.getAbsolutePath(), tokenCounter, WORDS_MAPPING);
 
         resetReviewCounterTo(initialReviewCounter);
         String line = bufferedReaderOfRawInput.readLine();
@@ -230,22 +226,32 @@ public class IndexWriter {
     }
 
 
-    private void constructIndexFromSorted(Map<Integer, String> wordsTermIdToTerm) throws IOException {
+    private void constructIndexFromSorted(Map<Integer, String> wordsTermIdToTerm, int initialReviewCounter) throws IOException {
         // words
         int readBlockSize = estimateBestSizeOfWordsBlocks(tokenCounter, false);
         numOfWordsInFrontCodeBlock = calculateNumOfTokensInFrontCodeBlock(tokenCounter);
         wordsDataIndexWriter.loadSortedFileByBlocks(numOfWordsInFrontCodeBlock, readBlockSize, wordsTermIdToTerm, reviewCounter);
 
         if (!SKIP_SORTING)
-            writeMetaData(indexDirectory.getPath());
-//        updateAllIndexMetaData();
-        deleteSortedFile(indexDirectory);
+            writeMetaData();
+        writeToInvalidationVector(mainIndexDirectory, initialReviewCounter);
+        deleteSortedFile(currentIndexDirectory);
     }
 
-    private void writeMetaData(String path)
+    public void writeToInvalidationVector(String mainIndexPath, int initialReviewCounter) throws IOException {
+        int numberOfReviewsAdded = reviewCounter - initialReviewCounter;
+        RandomAccessFile raValidationVectorFile = new RandomAccessFile(
+                mainIndexPath + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
+        raValidationVectorFile.seek(initialReviewCounter);
+        for(int i = 0; i < numberOfReviewsAdded; i++){
+            raValidationVectorFile.writeByte(0);
+        }
+    }
+
+    private void writeMetaData()
             throws IOException {
         RandomAccessFile raMetaFile = new RandomAccessFile(
-                path + File.separator + MAIN_INDEX_META_DATA_FILENAME, "rw");
+                currentIndexDirectory.getPath() + File.separator + MAIN_INDEX_META_DATA_FILENAME, "rw");
         raMetaFile.writeInt(reviewCounter - 1);
         raMetaFile.writeInt(tokenCounter);
         raMetaFile.writeInt(numOfWordsInFrontCodeBlock);
@@ -264,4 +270,24 @@ public class IndexWriter {
         this.reviewCounter = initialReviewCounter;
     }
 
+    /** Looks for the corresponding BYTES in the validation vector file and "flips" them to 1
+     * @param indexDirectory - directory of the main index, aka "indexes"
+     * @param ridsToDelete - review ids to delete. If not in range, will ignore.
+     */
+    public void delete(String indexDirectory, int[] ridsToDelete) {
+        try{
+            RandomAccessFile raValidationVectorFile = new RandomAccessFile(
+                    indexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
+            for(int rid: ridsToDelete){
+                raValidationVectorFile.seek(rid - 1);
+                raValidationVectorFile.writeByte(1);
+            }
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void merge(String indexDirectory) {
+
+    }
 }
