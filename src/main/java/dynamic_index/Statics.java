@@ -23,26 +23,16 @@ public final class Statics {
     public static final String WORDS_CONCAT_FILENAME = "wordsConcatFile.bin";
     public static final String WORDS_FRONT_CODED_FILENAME = "wordsFrontCodedToPointers.bin";
     public static final String WORDS_INVERTED_INDEX_FILENAME = "wordsInvertedIndex.bin";
-    public static final String WORDS_META_DATA_FILENAME = "wordsMetaData.bin";
 
-    public static final String PIDS_CONCAT_FILENAME = "pidsConcatFile.bin";
-    public static final String PIDS_FRONT_CODED_FILENAME = "pidsFrontCodedToPointers.bin";
-    public static final String PIDS_INVERTED_INDEX_FILENAME = "pidsInvertedIndex.bin";
-
-    public static final String INDEX_META_DATA_FILENAME = "indexMetaData.bin";
+    public static final String MAIN_INDEX_META_DATA_FILENAME = "mainIndexMetaData.bin";
+    public static final String ALL_INDEXES_META_DATA_FILENAME = "allIndexesMetaData.bin";
 
     public static final String MERGE_FILES_DIRECTORY_NAME = "mergeFilesDirectory";
     public static final String WORDS_SORTED_FILE_NAME = "WORDS_SORTED.bin";
-    public static final String PIDS_SORTED_FILE_NAME = "PIDS_SORTED.bin";
     public static final String BINARY_FILE_SUFFIX = ".bin";
 
     public static final String TERM_MAP_FILE_DEBUG = "TermToTermID.txt";
     public static final String WORDS_MAPPING = "words";
-
-
-    /**
-     *      Calculating numbers and block sizes
-     */
 
     public static byte[] intToByteArray(int intToConvert) {
         ByteBuffer b = ByteBuffer.allocate(4);
@@ -54,20 +44,15 @@ public final class Statics {
         int tokensPerBlock = BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
         if (numOfTokens > 10000 && numOfTokens <= 1000000) { // 10,000 to 1 million
             tokensPerBlock = (int) Math.pow(tokensPerBlock, 2);
-        } else if (numOfTokens > 1000000 //&& numOfTokens <= 100000000
-        ) { // 1 million to 100 million
+        } else if (numOfTokens > 1000000) {
             tokensPerBlock = (int) Math.pow(tokensPerBlock, 3);
         }
-//        else if (numOfTokens > 100000000) { // above 100 million
-//            tokensPerBlock = (int)Math.pow(tokensPerBlock, 4)/4;
-//        }
         return tokensPerBlock;
     }
 
     public static int roundDownToMultiplicationOf(int roundItDown, int multiplicationOf) {
         return (roundItDown / multiplicationOf) * multiplicationOf;
     }
-
 
     public static void printElapsedTime(long startTime, String methodName) {
         long endTime = System.currentTimeMillis();
@@ -79,8 +64,26 @@ public final class Statics {
                 elapsedTimeMinutes,
                 elapsedTimeSeconds,
                 elapsedTimeMilliSeconds);
-
     }
+
+    public static void printElapsedTimeToLog(PrintWriter tlog, long startTime, String methodName) {
+        long endTime = System.currentTimeMillis();
+        long elapsedTimeMilliSeconds = endTime - startTime;
+        long elapsedTimeSeconds = elapsedTimeMilliSeconds / 1000;
+        long elapsedTimeMinutes = elapsedTimeSeconds / 60;
+        System.out.format("Elapsed time for %s: %d in mins, %d in secs, %d in ms\n",
+                methodName,
+                elapsedTimeMinutes,
+                elapsedTimeSeconds,
+                elapsedTimeMilliSeconds);
+
+        tlog.format("Elapsed time for %s: %d in mins, %d in secs, %d in ms\n",
+                methodName,
+                elapsedTimeMinutes,
+                elapsedTimeSeconds,
+                elapsedTimeMilliSeconds);
+    }
+
 
     public static int estimateBestSizeOfWordsBlocks(final long numOfTokens, final boolean withFreeMemory) {
         long estimatedSizeOfFile = numOfTokens * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
@@ -117,10 +120,6 @@ public final class Statics {
         return (int) blockSize;
     }
 
-    /**
-     *      Debugging files writing and reading
-     */
-
     public static void deleteSortedFile(File indexDirectory) throws IOException {
         File wordsSortedFile = new File(indexDirectory + File.separator
                 + Statics.WORDS_SORTED_FILE_NAME);
@@ -134,9 +133,9 @@ public final class Statics {
         return swapped;
     }
 
-
-    public static int loadTokenCounter(File indexDirectory) {
-        File metaFile = new File(indexDirectory.getPath() + File.separator + INDEX_META_DATA_FILENAME);
+    public static int getTokenCounter(File indexDirectory, boolean loadAll) {
+        String filename = loadAll? ALL_INDEXES_META_DATA_FILENAME: MAIN_INDEX_META_DATA_FILENAME;
+        File metaFile = new File(indexDirectory.getPath() + File.separator + filename);
         byte[] numOfReviewTokensTokensInBlock = new byte[INTEGER_SIZE * 3];
         try {
             new RandomAccessFile(metaFile, "r").read(numOfReviewTokensTokensInBlock);
@@ -147,8 +146,9 @@ public final class Statics {
     }
 
 
-    public static int loadReviewCounter(File indexDirectory) {
-        File metaFile = new File(indexDirectory.getPath() + File.separator + INDEX_META_DATA_FILENAME);
+    public static int getReviewCounter(File indexDirectory, boolean loadAll) {
+        String filename = loadAll? ALL_INDEXES_META_DATA_FILENAME: MAIN_INDEX_META_DATA_FILENAME;
+        File metaFile = new File(indexDirectory.getPath() + File.separator + filename);
         byte[] reviewCounter = new byte[INTEGER_SIZE];
         try {
             new RandomAccessFile(metaFile, "r").read(reviewCounter);
@@ -230,11 +230,4 @@ public final class Statics {
         }
     }
 
-
-    private static long roundDownToInteger(long blockSize) {
-        if (blockSize > Integer.MAX_VALUE) {
-            blockSize = Integer.MAX_VALUE;
-        }
-        return blockSize;
-    }
 }

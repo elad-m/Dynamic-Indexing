@@ -35,20 +35,35 @@ public class IndexWriter {
     private static final boolean READ_ALL_FILE = true; // when true the next line is ignored
     private static final int BATCH_SIZE_OF_REVIEWS_TO_READ = 1000000;
 
-    public IndexWriter(int inputScaleType){
+    public IndexWriter(int inputScaleType) {
         this.inputScaleType = inputScaleType;
     }
+
     /**
-     * Given product review data, creates an on disk index
-     * inputFile is the path to the file containing the review data
-     * dir is the directory in which all index files will be created
-     * if the directory does not exist, it should be created
+     * Writes an index of a given product review data.
+     *
+     * @param inputFile          - product review raw data
+     * @param mainIndexDirectory - directory to create the index in
      */
-    public void write(String inputFile, String dir) {
-        createIndexFilesDirectory(dir);
+    public void write(String inputFile, String mainIndexDirectory) {
+        createIndexFilesDirectory(mainIndexDirectory);
         instantiateWriters();
-        constructIndex(inputFile);
+        constructIndex(inputFile, reviewCounter);
     }
+
+    /**
+     * Writes an auxiliary index of a given product review data
+     *
+     * @param inputFile         - product review raw data
+     * @param auxIndexDirectory - directory for the auxiliary index. Should be inside the
+     *                          main index directory.
+     */
+    public void insert(String inputFile, String auxIndexDirectory) {
+        createIndexFilesDirectory(auxIndexDirectory);
+        instantiateWriters();
+        constructIndex(inputFile, reviewCounter);
+    }
+
 
     private void instantiateWriters() {
         wordsDataIndexWriter = new WordsIndexWriter(indexDirectory);
@@ -66,18 +81,18 @@ public class IndexWriter {
     /*
     Using the first external sort algorithm (sort-merge).
      */
-    private void constructIndex(String inputFile) {
+    private void constructIndex(String inputFile, final int initialReviewCounter) {
         try {
             Map<Integer, String> wordTermIdToTerm;
             if (!SKIP_SORTING) {
                 constructTermToTermIDMapping(inputFile); // token and review counter complete
                 writeHashmapFor100Random();
-                firstSortIteration(inputFile); // review counter resets, second input reading
+                firstSortIteration(inputFile, initialReviewCounter); // review counter resets, second input reading
                 externalSort();
                 wordTermIdToTerm = swapHashMapDirections(wordTermToTermID);
             } else { // when skipping sorting
-                tokenCounter = loadTokenCounter(indexDirectory);  // also token counter
-                reviewCounter = loadReviewCounter(indexDirectory);
+                tokenCounter = getTokenCounter(indexDirectory, false);  // also token counter
+                reviewCounter = 1 + getReviewCounter(indexDirectory, false);
                 wordTermIdToTerm = loadMapFromFile(indexDirectory, WORDS_MAPPING);
             }
             System.gc();
@@ -94,13 +109,13 @@ public class IndexWriter {
 
     private void constructTermToTermIDMapping(String inputFile) throws IOException {
         System.out.println("Starting term mapping:");
-        long startTime = System.currentTimeMillis();
+//        long startTime = System.currentTimeMillis();
 
         Set<String> wordTerms = getTermsSorted(inputFile); // first reading of whole input file
         createMappingForSet(wordTerms, wordTermToTermID);
 
         wordTerms.clear();
-        printElapsedTime(startTime, " Building Term To Term ID mapping: ");
+//        printElapsedTime(startTime, " Building Term To Term ID mapping: ");
     }
 
     private Set<String> getTermsSorted(String inputFile) throws IOException {
@@ -148,19 +163,20 @@ public class IndexWriter {
         printElapsedTime(startTime, "Words Sort Merging");
     }
 
-    private void firstSortIteration(String inputFile) throws IOException {
+    private void firstSortIteration(String inputFile, int initialReviewCounter) throws IOException {
+        System.out.println("First sort iteration...");
         long blockWriterStartTime = System.currentTimeMillis();
         BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
-        wordsTermToReviewBlockWriter = new TermToReviewBlockWriter(indexDirectory.getName(), tokenCounter, WORDS_MAPPING);
+        wordsTermToReviewBlockWriter = new TermToReviewBlockWriter(indexDirectory.getAbsolutePath(), tokenCounter, WORDS_MAPPING);
 
-        resetReviewCounter();
+        resetReviewCounterTo(initialReviewCounter);
         String line = bufferedReaderOfRawInput.readLine();
         while (shouldContinueReading(line, reviewCounter)) {
             if (!line.isEmpty()) {
                 String[] splitArray = line.split(":", 2);
                 String field = splitArray[0];
                 String value = splitArray[1];
-                if(field.equals(REVIEW_TEXT_FIELD)){
+                if (field.equals(REVIEW_TEXT_FIELD)) {
                     feedTextToBlockWriter(value); // first stage of sort
                     incrementReviewCounter();
                 }
@@ -218,17 +234,18 @@ public class IndexWriter {
         // words
         int readBlockSize = estimateBestSizeOfWordsBlocks(tokenCounter, false);
         numOfWordsInFrontCodeBlock = calculateNumOfTokensInFrontCodeBlock(tokenCounter);
-        wordsDataIndexWriter.loadSortedFileInBlock(numOfWordsInFrontCodeBlock, readBlockSize, wordsTermIdToTerm, reviewCounter);
+        wordsDataIndexWriter.loadSortedFileByBlocks(numOfWordsInFrontCodeBlock, readBlockSize, wordsTermIdToTerm, reviewCounter);
 
         if (!SKIP_SORTING)
             writeMetaData(indexDirectory.getPath());
+//        updateAllIndexMetaData();
         deleteSortedFile(indexDirectory);
     }
 
     private void writeMetaData(String path)
             throws IOException {
         RandomAccessFile raMetaFile = new RandomAccessFile(
-                path + File.separator + INDEX_META_DATA_FILENAME, "rw");
+                path + File.separator + MAIN_INDEX_META_DATA_FILENAME, "rw");
         raMetaFile.writeInt(reviewCounter - 1);
         raMetaFile.writeInt(tokenCounter);
         raMetaFile.writeInt(numOfWordsInFrontCodeBlock);
@@ -237,71 +254,14 @@ public class IndexWriter {
 
     private void incrementTokenCounter() {
         tokenCounter++;
-        assert tokenCounter < Integer.MAX_VALUE;
     }
 
     private void incrementReviewCounter() {
         reviewCounter++;
     }
 
-    private void resetReviewCounter() {
-        this.reviewCounter = 1;
+    private void resetReviewCounterTo(int initialReviewCounter) {
+        this.reviewCounter = initialReviewCounter;
     }
-
-
-    /**
-     * Delete all index files by removing the given directory
-     */
-    public void removeIndex(String dir) {
-        File file = new File(dir);
-        deleteFileOrDirectory(file);
-    }
-
-    private void deleteFileOrDirectory(File toDelete) {
-        try {
-            if (toDelete.isDirectory()) {
-                deleteDirectory(toDelete);
-            } else {
-                singleDelete(toDelete);
-            }
-        } catch (SecurityException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void deleteDirectory(File toDelete) {
-        try {
-            File[] childFiles = toDelete.listFiles();
-            if (childFiles != null) {
-                if (childFiles.length == 0) { //Directory is empty. Proceed for deletion
-                    singleDelete(toDelete);
-                } else {
-                    for (File childFilePath : childFiles) {
-                        deleteFileOrDirectory(childFilePath);
-                    }
-                    deleteDirectory(toDelete); // calling again, now should be empty
-                }
-            }
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void singleDelete(File singleFileToDelete) {
-        Path dirPathToDelete = singleFileToDelete.toPath();
-        try {
-            Files.delete(dirPathToDelete);
-        } catch (NoSuchFileException x) {
-            System.err.format("%s: no such file or directory%n", dirPathToDelete.toString());
-        } catch (DirectoryNotEmptyException x) {
-            System.err.format("%s not empty%n", dirPathToDelete.toString());
-        } catch (IOException x) {
-            x.printStackTrace();
-            System.out.println("FILE NAME: " + singleFileToDelete.getName());
-            System.err.println(x.getMessage());
-            System.exit(3);
-        }
-    }
-
 
 }

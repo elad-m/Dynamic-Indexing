@@ -17,16 +17,14 @@ import static java.lang.System.exit;
  * Answers IndexReader's queries, by performing binary searches in the index
  * files, and extracting correct data from their bytes.
  */
-public class DataIndexReader {
+public class SingleIndexReader {
 
 
     private static final int TWO_BYTES_READ = 2;
-    public static final String NO_INVERTED_FILE = "NO_INVERTED";
-    private final int NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
-    private final int FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
-    private final int FRONT_CODE_ROW_SIZE_IN_BYTES;
+    private int NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
+    private int FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
+    private int FRONT_CODE_ROW_SIZE_IN_BYTES;
 
-    private static final String WORD_QUERY = "WORD";
 
     private static final short BITWISE_AND_OPERAND_TO_DECODE_SHORT = -16385; // 101111..
     // next line is from: 0b, 01111111, -1b, -1b
@@ -36,15 +34,16 @@ public class DataIndexReader {
 
 
     private String tokenToFind;
-    /* these files will be instantiated according to words or products */
-    private final File indexDirectory;
-
     private File invertedIndexFile;
     private byte[] indexDictionary;
     private byte[] concatString;
 
-    public DataIndexReader(File indexDirectory, int numOfTokensPerBlock) {
-        this.indexDirectory = indexDirectory;
+    public SingleIndexReader(byte[] mainIndexDictionary,
+                             byte[] mainConcatString,
+                             File invertedIndexFile,
+                             int numOfTokensPerBlock) {
+        this.invertedIndexFile = invertedIndexFile;
+        assignArrays(mainIndexDictionary, mainConcatString);
         this.NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK = numOfTokensPerBlock;
         FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE =
                 (FrontCodeBlock.BYTES_IN_WORD_BLOCK * NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK);
@@ -52,11 +51,9 @@ public class DataIndexReader {
                 Statics.INTEGER_SIZE + FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
     }
 
-
-    public Enumeration<Integer> getReviewsWithWord(String word, byte[] indexDictionary, byte[] concatString) {
+    public Enumeration<Integer> getReviewsWithWord(String word) {
         try {
             tokenToFind = word;
-            instantiateFiles(indexDictionary, concatString);
             return findInvertedIndexLine(word);
         } catch (IOException e) {
             e.printStackTrace();
@@ -65,11 +62,10 @@ public class DataIndexReader {
     }
 
 
-    private void instantiateFiles(byte[] indexDictionary, byte[] concatString) {
+    private void assignArrays(byte[] indexDictionary, byte[] concatString) {
         this.indexDictionary = indexDictionary;
         this.concatString = concatString;
-        this.invertedIndexFile = new File(indexDirectory.getPath()
-                + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
+
     }
 
     private Enumeration<Integer> findInvertedIndexLine(String word)

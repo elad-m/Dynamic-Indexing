@@ -117,7 +117,7 @@ public class InvertedIndexOfWord {
         System.out.println("\tcreated file with path: " + ridDumpFile.getPath() + " and " + freqDumpFile.getPath());
     }
 
-    public void externalWrite(BufferedOutputStream bosOfAllInverted) {
+    public void writeTo(BufferedOutputStream bosOfAllInverted) {
         try {
             convertMapToByteArrays();
             if (hasFiles) {
@@ -223,17 +223,9 @@ public class InvertedIndexOfWord {
     public String toString() {
         return "InvertedIndexOfWord{" +
                 "word: " + word +
+                "rids: " + ridToFrequencyMap.keySet() +
                 '}' + '\n';
     }
-
-    int getNumOfMentions() {
-        return numOfMentions;
-    }
-
-    int getNumOfReviews() {
-        return numOfReviews;
-    }
-
 
     void externalWritePerFile(BufferedOutputStream bosOfAllInverted, File dumpFile, BufferedOutputStream bosDumpFile) throws IOException {
         bosDumpFile.close(); // close writing before reading

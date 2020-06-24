@@ -54,10 +54,10 @@ public class WordsIndexWriter {
     }
 
 
-    public void loadSortedFileInBlock(int numOfTokensInFrontCodeBlock,
-                                      int readBlockSizeInPairs,
-                                      Map<Integer, String> termIdToTerm,
-                                      int reviewCounter) {
+    public void loadSortedFileByBlocks(int numOfTokensInFrontCodeBlock,
+                                       int readBlockSizeInPairs,
+                                       Map<Integer, String> termIdToTerm,
+                                       int reviewCounter) {
         this.numOfTokensInFrontCodeBlock = numOfTokensInFrontCodeBlock;
         InvertedIndexOfWord.MAX_NUM_OF_PAIRS *= Math.max(1, reviewCounter / 1000);
         System.out.println("MAX_NUM_OF_PAIRS Words: " + InvertedIndexOfWord.MAX_NUM_OF_PAIRS);
@@ -69,13 +69,13 @@ public class WordsIndexWriter {
 
         System.out.println("reading block size in WORDS writer in bytes: " + readingBlockSizeInBytes);
         System.out.println("NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK: " + numOfTokensInFrontCodeBlock);
-        loadSortedFileInBlock(sortedFile, readingBlockSizeInBytes, termIdToTerm);
+        loadSortedFileByBlocks(sortedFile, readingBlockSizeInBytes, termIdToTerm);
     }
 
 
-    private void loadSortedFileInBlock(File sortedFile,
-                                         int readingBlockSizeInBytes,
-                                         Map<Integer, String> termIdToTerm) {
+    private void loadSortedFileByBlocks(File sortedFile,
+                                        int readingBlockSizeInBytes,
+                                        Map<Integer, String> termIdToTerm) {
         try (RandomAccessFile raSortedFile = new RandomAccessFile(sortedFile, "r")) {
             byte[] blockAsBytes = new byte[readingBlockSizeInBytes];
             int amountOfBytesRead = raSortedFile.read(blockAsBytes);
@@ -175,8 +175,7 @@ public class WordsIndexWriter {
                 break;
             }
             // handles the writing with dump files if they exist
-            invertedIndexOfWord.externalWrite(invertedOutputStream);
-//            writeMetaToFile(invertedIndexOfWord); // meta gets written either way
+            invertedIndexOfWord.writeTo(invertedOutputStream);
             i++;
         }
     }

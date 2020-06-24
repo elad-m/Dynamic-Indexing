@@ -54,7 +54,6 @@ public class TermToReviewBlockWriter {
         numOfFilesCreated++;
         String FILE_NAME_PATTERN = "sortedBlock";
         String BINARY_FILE_SUFFIX = ".bin";
-
         String newFileName = mergeFilesDirectory.getPath() + File.separator
                 + FILE_NAME_PATTERN + numOfFilesCreated + BINARY_FILE_SUFFIX;
 //        System.out.println("NEW FILE IN WRITER #" + numOfFilesCreated);
