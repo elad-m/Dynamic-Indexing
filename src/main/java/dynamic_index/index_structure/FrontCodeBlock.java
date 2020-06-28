@@ -1,8 +1,8 @@
 package dynamic_index.index_structure;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import static dynamic_index.Statics.intToByteArray;
 
@@ -16,7 +16,7 @@ public class FrontCodeBlock {
 
     final int frontCodeBlockTokenCapacity;
 
-    private final TreeMap<String, InvertedIndexOfWord> blockOfTokensAndData;
+//    private final TreeMap<String, InvertedIndexOfWord> blockOfTokensAndData;
     private final StringBuilder compressedString = new StringBuilder();
     private byte[] stringPointer;
     private final byte[] lengthsInBlock;
@@ -27,10 +27,10 @@ public class FrontCodeBlock {
     private int bytesOfInvertedIndexWrittenSoFar;
 
 
-    public FrontCodeBlock(Map<String, ? extends InvertedIndexOfWord> blockOfWordsAndData,
+    public FrontCodeBlock(TreeMap<String, ? extends InvertedIndexOfWord> blockOfWordsAndData,
                    int blocksReadInBytesSoFar, int numOfTokensInFrontCodeBlock) {
         this.frontCodeBlockTokenCapacity = numOfTokensInFrontCodeBlock;
-        this.blockSize = blockOfWordsAndData.size();
+        this.blockSize = blockOfWordsAndData.size(); // might be lower than capacity in the end of index
         assert this.blockSize > 0 : "empty words block";
         this.stringPointer = new byte[Integer.BYTES];
         this.lengthsInBlock = new byte[blockSize];
@@ -40,25 +40,54 @@ public class FrontCodeBlock {
 
         this.bytesOfInvertedIndexWrittenSoFar = blocksReadInBytesSoFar;
 
-        this.blockOfTokensAndData = new TreeMap<>(blockOfWordsAndData);
-        createCompression();
+        createCompression(blockOfWordsAndData);
+    }
+
+    public FrontCodeBlock(TreeSet<WordAndInvertedIndex> wordAndInvertedIndexTreeSet,
+                          int blocksReadInBytesSoFar, int numOfTokensInFrontCodeBlock) {
+        this.frontCodeBlockTokenCapacity = numOfTokensInFrontCodeBlock;
+        this.blockSize = wordAndInvertedIndexTreeSet.size();
+        assert this.blockSize > 0 : "empty words block";
+        this.stringPointer = new byte[Integer.BYTES];
+        this.lengthsInBlock = new byte[blockSize];
+        this.prefixLengthsInBlock = new byte[blockSize];
+        this.pointersInBlock = new byte[Integer.BYTES * blockSize];
+        this.pointersLengthsInBlock = new byte[Integer.BYTES * blockSize];
+
+        this.bytesOfInvertedIndexWrittenSoFar = blocksReadInBytesSoFar;
+
+        createCompression(wordAndInvertedIndexTreeSet);
+    }
+
+    private void createCompression(TreeSet<WordAndInvertedIndex> wordAndInvertedIndexTreeSet) {
+        String firstWord = wordAndInvertedIndexTreeSet.first().getWord();
+        int i =0;
+        for(WordAndInvertedIndex wordAndInvertedIndex: wordAndInvertedIndexTreeSet){
+            int sizeOfInverted = wordAndInvertedIndex.getInvertedIndexLength();
+            compressWord(firstWord, wordAndInvertedIndex.getWord(), sizeOfInverted, i);
+            i++;
+        }
     }
 
 
-    private void createCompression() {
-        String firstWord = blockOfTokensAndData.firstKey();
+    private void createCompression(TreeMap<String, ? extends InvertedIndexOfWord> blockOfWordsAndData) {
+        String firstWord = blockOfWordsAndData.firstKey();
         int i = 0;
-        for (String word : blockOfTokensAndData.keySet()) {
-            InvertedIndexOfWord invertedIndex = blockOfTokensAndData.get(word);
+        for (String word : blockOfWordsAndData.keySet()) {
+            InvertedIndexOfWord invertedIndex = blockOfWordsAndData.get(word);
             int sizeOfInvertedOfWord = invertedIndex.getNumberOfBytesWrittenToOutput();
-            FrontCodeBlockWord frontCodeBlockWord =
-                    new FrontCodeBlockWord(firstWord, word,
-                            bytesOfInvertedIndexWrittenSoFar,
-                            sizeOfInvertedOfWord);
-            bytesOfInvertedIndexWrittenSoFar += sizeOfInvertedOfWord;
-            updateBlock(i, frontCodeBlockWord);
+            compressWord(firstWord, word, sizeOfInvertedOfWord, i);
             i++;
         }
+    }
+
+    private void compressWord(String firstWord, String word, int sizeOfInvertedOfWord, int word_i){
+        FrontCodeBlockWord frontCodeBlockWord =
+                new FrontCodeBlockWord(firstWord, word,
+                        bytesOfInvertedIndexWrittenSoFar,
+                        sizeOfInvertedOfWord);
+        bytesOfInvertedIndexWrittenSoFar += sizeOfInvertedOfWord;
+        updateBlock(word_i, frontCodeBlockWord);
     }
 
     private void updateBlock(int i, FrontCodeBlockWord frontCodeBlockWord) {
@@ -172,7 +201,6 @@ public class FrontCodeBlock {
     @Override
     public String toString() {
         return "FrontCodeBlock{" +
-                "blockOfTokensAndData=" + blockOfTokensAndData.keySet() +
                 ", stringPointer=" + Arrays.toString(stringPointer) +
                 ", lengthsInBlock=" + Arrays.toString(lengthsInBlock) +
                 ", prefixLengthsInBlock=" + Arrays.toString(prefixLengthsInBlock) +

@@ -5,10 +5,10 @@ import java.io.File;
 @SuppressWarnings("SpellCheckingInspection")
 public class ScalingCases {
 
-    final String[] e1 = {"friend", "0", "y"};
-    final String[] ne1 = {"nonesenseeee","woordss"};
-    final String[] inse1 = {"sset", "kindred", "romantic", "atmosphere", "hearted", "posh"};
-    final String[] delWordse1 = {"aaa", "friend", "romantic", "atmosphere", "hearted", "posh"};
+    final String[] e1 = {"cuban","friend", "newpaperman", "glamor", "y"};
+    final String[] ne1 = {"0"};
+    final String[] inse1 = {"y", "aaa", "kindred", "romantic", "atmosphere", "hearted", "posh"};
+    final String[] delWordse1 = {"cuban", "newpaperman", "glamor", "aaa", "friend", "romantic", "posh"};
     final int[] delReviews1 = new int[]{1, 5, 10, 11, 13};
 
     final String[] e2InQueries = {"friend", "0", "asdfasdf"};

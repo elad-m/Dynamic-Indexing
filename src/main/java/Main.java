@@ -12,7 +12,7 @@ import static dynamic_index.Statics.printElapsedTimeToLog;
 public class Main {
 
     static final String INDEXES_DIR_NAME = "indexes";
-    static final String INSERTION_DIR_NAME = "E1TestResources\\insert";
+    static final String INSERTION_DIR_NAME = "E1TestResources";
     static final String AUXILIARY_INDEX_DIR_PATTERN = "aux";
     static PrintWriter tlog = null;
     public static final int INPUT_SCALE = 1;
@@ -31,31 +31,33 @@ public class Main {
         ScalingCases scalingCases = new ScalingCases(INPUT_SCALE, insertionDirectory);
         createTestLog(indexDirectory, scalingCases.getTestType());
 
-        IndexWriter indexWriter = new IndexWriter(indexDirectory, INPUT_SCALE);
+//        IndexWriter indexWriter = new IndexWriter(indexDirectory, INPUT_SCALE);
 //        buildIndex(indexDirectory, indexWriter, scalingCases.getInputFilename());
 
-//        insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
+//        IndexReader indexReader = insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
         IndexReader indexReader = new IndexReader(indexDirectory);
-//        queryWordIndex(indexReader, scalingCases);
+//        indexReader = mergeIndex(indexDirectory, indexWriter, indexReader);
+        queryWordIndex(indexReader, scalingCases);
 //        deleteReviews(indexDirectory, indexWriter, scalingCases);
-        mergeIndex(indexDirectory, indexWriter);
-//        queryAfterDelete(indexReader, scalingCases);
+        queryAfterDelete(indexReader, scalingCases);
 
         tlog.close();
     }
 
-    private static void mergeIndex(String indexDirectory, IndexWriter indexWriter) {
+    private static IndexReader mergeIndex(String indexDirectory, IndexWriter indexWriter, IndexReader indexReader) {
         System.out.println("=====\n" + "Merging All Indexes " + "\n=====");
-        indexWriter.merge(indexDirectory);
+        indexWriter.merge(indexReader);
+        return new IndexReader(indexDirectory);
     }
+
 
     private static void deleteReviews(String indexDirectory, IndexWriter indexWriter, ScalingCases scalingCases) {
         System.out.println("=====\n" + "Index deletion " + "\n=====");
         indexWriter.delete(indexDirectory, scalingCases.getDelReviews());
     }
 
-    private static void insertToIndex(String indexDirectory, IndexWriter indexWriter,
-                                      ScalingCases scalingCases, int numberOfInsertions) {
+    private static IndexReader insertToIndex(String indexDirectory, IndexWriter indexWriter,
+                                             ScalingCases scalingCases, int numberOfInsertions) {
         assert numberOfInsertions <= scalingCases.getNumberOfInsertionFiles();
         for (int i = 0; i < numberOfInsertions; i++) {
             System.out.println("=====\n" + "Index insertion number " + i + "\n=====");
@@ -63,6 +65,8 @@ public class Main {
                     getAuxiliaryIndexDirPattern(indexDirectory, i),
                     scalingCases.getInsertFileName(i));
         }
+        IndexReader indexReader = new IndexReader(indexDirectory);
+        return indexReader;
     }
 
     private static String getAuxiliaryIndexDirPattern(String indexDirectory, int num) {
@@ -91,16 +95,16 @@ public class Main {
     }
 
     private static void queryWordIndex(IndexReader indexReader, ScalingCases scalingCases) {
-        tlog.println("words in index queries...");
+        tlog.println("===== words in index queries... =====");
         testGetReviewsWithToken(indexReader, scalingCases.getWordQueries());
-        tlog.println("words not in index queries...");
+        tlog.println("===== words not in index queries... =====");
         testGetReviewsWithToken(indexReader, scalingCases.getNegWordQueries());
-        tlog.println("words inserted queries...");
+        tlog.println("===== words inserted queries... =====");
         testGetReviewsWithToken(indexReader, scalingCases.getInsertQueries());
     }
 
     private static void queryAfterDelete(IndexReader indexReader, ScalingCases scalingCases) {
-        tlog.println("words after deleted reviews ...");
+        tlog.println("===== words after deleted reviews... =====");
         testGetReviewsWithToken(indexReader, scalingCases.getDelQueries());
     }
 

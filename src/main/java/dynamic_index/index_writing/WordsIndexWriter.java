@@ -18,15 +18,15 @@ import java.util.TreeMap;
  */
 public class WordsIndexWriter {
 
-    protected final File indexDirectory;
-    protected StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
-    protected int numOfCharactersWrittenInSuffixFile = 0;
-    protected int numOfBytesWrittenInInvertedIndexFile = 0;
+    private final File indexDirectory;
+    private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
+    private int numOfCharactersWrittenInSuffixFile = 0;
+    private int numOfBytesWrittenInInvertedIndexFile = 0;
 
-    protected BufferedOutputStream frontCodeOutputStream;
-    protected BufferedOutputStream invertedOutputStream;
-    protected BufferedWriter bufferedStringConcatWriter;
-    protected boolean isInLastWriteIteration = false;
+    private BufferedOutputStream frontCodeOutputStream;
+    private BufferedOutputStream invertedOutputStream;
+    private BufferedWriter bufferedStringConcatWriter;
+    private boolean isInLastWriteIteration = false;
     private int numOfTokensInFrontCodeBlock = 8;
 
     private final Map<String, InvertedIndexOfWord> wordToInvertedIndex = new TreeMap<>();
@@ -193,7 +193,7 @@ public class WordsIndexWriter {
 
 
     void writeFrontCodeFile(int stopWritingWordsAt) throws IOException {
-        Map<String, InvertedIndexOfWord> blockOfWordsToInvertedIndex = new TreeMap<>();
+        TreeMap<String, InvertedIndexOfWord> blockOfWordsToInvertedIndex = new TreeMap<>();
         int i = 0;
         for (Map.Entry<String, InvertedIndexOfWord> wordAndInvertedIndex : wordToInvertedIndex.entrySet()) {
             if (!isInLastWriteIteration && i == stopWritingWordsAt) {
@@ -236,7 +236,7 @@ public class WordsIndexWriter {
     }
 
 
-    void writeFrontCodeBlock(Map<String, InvertedIndexOfWord> blockOfPidsToInvertedIndex, int numOfTokensInFrontCodeBlock)
+    void writeFrontCodeBlock(TreeMap<String, InvertedIndexOfWord> blockOfPidsToInvertedIndex, int numOfTokensInFrontCodeBlock)
             throws IOException {
         FrontCodeBlock frontCodeBlock = new FrontCodeBlock(blockOfPidsToInvertedIndex,
                 numOfBytesWrittenInInvertedIndexFile,

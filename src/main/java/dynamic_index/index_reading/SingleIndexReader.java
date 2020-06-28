@@ -4,9 +4,7 @@ package dynamic_index.index_reading;
 import dynamic_index.Statics;
 import dynamic_index.index_structure.FrontCodeBlock;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -23,6 +21,9 @@ public class SingleIndexReader {
     private static final int TWO_BYTES_READ = 2;
     private int NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
     private int FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
+
+
+
     private int FRONT_CODE_ROW_SIZE_IN_BYTES;
 
 
@@ -30,19 +31,30 @@ public class SingleIndexReader {
     // next line is from: 0b, 01111111, -1b, -1b
     private static final int BITWISE_AND_OPERAND_TO_DECODE_THREE_BYTES = 8388607;
     private static final int BITWISE_AND_OPERAND_TO_DECODE_INTEGER = 1073741823;
-    public static final int AND_OPERAND_FOR_RIGHT_SHIFTING_TRUE_BYTE_VALUE = 255;
+    private static final int AND_OPERAND_FOR_RIGHT_SHIFTING_TRUE_BYTE_VALUE = 255;
 
 
     private String tokenToFind;
-    private File invertedIndexFile;
+
+    final File mainIndexDirectory;
+    private final File invertedIndexFile;
+
+    public int getIndexDictionaryLength() {
+        return indexDictionary.length;
+    }
+
     private byte[] indexDictionary;
     private byte[] concatString;
+    private final File invalidationVector;
 
     public SingleIndexReader(byte[] mainIndexDictionary,
                              byte[] mainConcatString,
                              File invertedIndexFile,
-                             int numOfTokensPerBlock) {
+                             File invalidationVector,
+                             int numOfTokensPerBlock, File mainIndexDirectory) {
         this.invertedIndexFile = invertedIndexFile;
+        this.invalidationVector = invalidationVector;
+        this.mainIndexDirectory = mainIndexDirectory;
         assignArrays(mainIndexDictionary, mainConcatString);
         this.NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK = numOfTokensPerBlock;
         FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE =
@@ -51,13 +63,13 @@ public class SingleIndexReader {
                 Statics.INTEGER_SIZE + FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
     }
 
-    public Enumeration<Integer> getReviewsWithWord(String word) {
+    public TreeMap<Integer, Integer> getReviewsWithWord(String word) {
         try {
             tokenToFind = word;
             return findInvertedIndexLine(word);
         } catch (IOException e) {
             e.printStackTrace();
-            return new Vector<Integer>().elements();
+            return new TreeMap<>();
         }
     }
 
@@ -68,18 +80,18 @@ public class SingleIndexReader {
 
     }
 
-    private Enumeration<Integer> findInvertedIndexLine(String word)
+    private TreeMap<Integer, Integer> findInvertedIndexLine(String word)
             throws IOException {
-        Enumeration<Integer> enumeration;
+        TreeMap<Integer,Integer> map;
         TokenMetaData tokenMetaData = binarySearch(word,
                 0,
                 (indexDictionary.length / FRONT_CODE_ROW_SIZE_IN_BYTES) - 1);
         if (tokenMetaData == null) {
-            enumeration = new Vector<Integer>().elements();
+            map = new TreeMap<>();
         } else {
-            enumeration = getEnumerationFromRow(tokenMetaData);
+            map = getMapFromRawInvertedIndex(tokenMetaData);
         }
-        return enumeration;
+        return map;
     }
 
 
@@ -96,7 +108,7 @@ public class SingleIndexReader {
                 rowsLowerBound, rowsUpperBound, middleInRows);
     }
 
-    private TreeMap<String, TokenMetaData> getWordsFromRowOfBytes(int middleInBytes, int middleInRows) {
+    TreeMap<String, TokenMetaData> getWordsFromRowOfBytes(int middleInBytes, int middleInRows) {
         /* In each stage in the binary search, we have to read all the words
            in the block of a string, since it is possible that the first letter
            is not a prefix of some word in the block.
@@ -173,16 +185,44 @@ public class SingleIndexReader {
         }
     }
 
-    private Enumeration<Integer> getEnumerationFromRow(TokenMetaData pointerAndLength)
+    TreeMap<Integer, Integer> getMapFromRawInvertedIndex(TokenMetaData pointerAndLength)
             throws IOException {
+        byte[] rowToReadInto = getBytesOfInvertedIndexRAF(pointerAndLength); // todo: get bytes by buffer!
+        List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
+        TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
+        filterResults(results);
+        return results;
+    }
+
+    private void filterResults(TreeMap<Integer, Integer> unfilteredResults){
+        try{
+            BufferedInputStream validationVectorBIS = new BufferedInputStream(new FileInputStream(invalidationVector));
+            int byteRead = validationVectorBIS.read();
+            int byteCounter = 1;
+            while (byteRead != -1) {
+                if(unfilteredResults.isEmpty()){
+                    break; // no need to continue reading
+                }
+                if (byteRead == 1) {
+                    unfilteredResults.remove(byteCounter);
+                }
+                byteRead = validationVectorBIS.read();
+                byteCounter++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private byte[] getBytesOfInvertedIndexRAF(TokenMetaData pointerAndLength) throws IOException {
         RandomAccessFile raInvertedIndexFile = new RandomAccessFile(invertedIndexFile, "r");
         raInvertedIndexFile.seek(pointerAndLength.getFreqPointer());
         byte[] rowToReadInto = new byte[pointerAndLength.getFreqLength()];
         raInvertedIndexFile.read(rowToReadInto);
         raInvertedIndexFile.close();
-        List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
-        return getEnumerationFromListOfIntegers(integersInBytesRow);
+        return rowToReadInto;
     }
+
 
     private List<Integer> decodeBytesToIntegers(byte[] rowInBytes) {
         // using length pre-coded varint
@@ -270,56 +310,32 @@ public class SingleIndexReader {
             return (intRid & BITWISE_AND_OPERAND_TO_DECODE_INTEGER);
     }
 
-    private Enumeration<Integer> getEnumerationFromListOfIntegers(List<Integer> integersInBytesRow) {
+    private TreeMap<Integer,Integer> getMapFromListOfIntegers(List<Integer> integersInBytesRow) {
         int size = integersInBytesRow.size();
         assert size % 2 == 0 : "Bad read of bytes line";
 
         List<Integer> gaps = new ArrayList<>(integersInBytesRow.subList(0, size / 2));
         List<Integer> frequencies = new ArrayList<>(integersInBytesRow.subList(size / 2, size));
         assert gaps.size() == frequencies.size();
-        Vector<Integer> finalVector = new Vector<>(size, size);
+        TreeMap<Integer, Integer> finalMap = new TreeMap<>();
 
         int gapCumSum = 0;
         for (int i = 0; i < gaps.size(); i++) {
             int gap = gaps.get(i);
             gapCumSum += gap;
             int frequency = frequencies.get(i);
-            finalVector.add(gapCumSum);
-            finalVector.add(frequency);
+            finalMap.put(gapCumSum, frequency);
 
         }
-        return finalVector.elements();
+        return finalMap;
     }
 
 
-    /**
-     * Data about token (word/pid) that is necessary to complete a search for inverted index
-     * of a token, i.e. the frequency pointer and this pointer's length in bytes.
-     */
-    private static class TokenMetaData {
-
-        private final int freqPointer;
-        private final int freqLength;
-        //the following is only to get meta data by numbering the words in the dictionary
-        private final int tokenNumberInFile;
-
-        private TokenMetaData(int freqPointer,
-                              int freqLength,
-                              int tokenId) {
-            this.freqPointer = freqPointer;
-            this.freqLength = freqLength;
-            this.tokenNumberInFile = tokenId;
-        }
-
-        int getFreqPointer() {
-            return freqPointer;
-        }
-
-        int getFreqLength() {
-            return freqLength;
-        }
-
-
+    public File getInvertedIndexFile() {
+        return invertedIndexFile;
+    }
+    public int getFRONT_CODE_ROW_SIZE_IN_BYTES() {
+        return FRONT_CODE_ROW_SIZE_IN_BYTES;
     }
 
 

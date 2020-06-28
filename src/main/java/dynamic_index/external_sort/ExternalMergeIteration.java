@@ -98,7 +98,7 @@ public class ExternalMergeIteration {
             return null;
         } else {
             for (NumberedQueue currentQueue: mergeFilesQueues){
-                if(!currentQueue.isQueueDone()){
+                if(currentQueue.isQueueNotDone()){
                     TermIdReviewIdPair minPairForCurrentQueue = currentQueue.peek();
                     assert minPairForCurrentQueue != null;
                     TermIdReviewIdPair prevMinPair = minQueue.peek();
@@ -113,7 +113,7 @@ public class ExternalMergeIteration {
 
     private NumberedQueue getFirstNotDoneQueue(){
         for (NumberedQueue numberedQueue: mergeFilesQueues){
-            if(!numberedQueue.isQueueDone()){
+            if(numberedQueue.isQueueNotDone()){
                 return numberedQueue;
             }
         }
@@ -159,9 +159,9 @@ public class ExternalMergeIteration {
             return termIdReviewIdPair;
         }
 
-        @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-        boolean isQueueDone(){
-            return isQueueDone;
+
+        boolean isQueueNotDone(){
+            return !isQueueDone;
         }
 
         private void load() {

@@ -1,5 +1,6 @@
 package dynamic_index;
 
+import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_reading.SingleIndexReader;
 
 import java.io.*;
@@ -11,7 +12,8 @@ import java.util.Vector;
 
 
 /**
- * Reads all indexes - main and auxiliaries if exist - and put the results together.
+ * Reads all indexes - main and auxiliaries if exist - and put the results together while considering
+ * deleted review IDs.
  */
 public class IndexReader {
 
@@ -23,6 +25,7 @@ public class IndexReader {
     private byte[] mainIndexDictionary;
     private byte[] mainConcatString;
     private int mainNumOfWordsInFrontCodeBlock;
+    private File invalidationVector;
 
     // auxiliary index data
     private int numOfAuxIndexes = 0;
@@ -94,10 +97,16 @@ public class IndexReader {
                 + File.separator + Statics.WORDS_FRONT_CODED_FILENAME);
         File mainStringConcatFile = new File(mainIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_CONCAT_FILENAME);
-        mainIndexDictionary = Files.readAllBytes(mainDictionaryFile.toPath());
-        mainConcatString = Files.readAllBytes(mainStringConcatFile.toPath());
         mainInvertedIndexFile = new File(mainIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
+        invalidationVector = new File(mainIndexDirectory.getPath()
+                + File.separator + Statics.INVALIDATION_VECTOR_FILENAME);
+
+        assert mainDictionaryFile.exists() && mainStringConcatFile.exists()
+                && mainInvertedIndexFile.exists() && invalidationVector.exists();
+
+        mainIndexDictionary = Files.readAllBytes(mainDictionaryFile.toPath());
+        mainConcatString = Files.readAllBytes(mainStringConcatFile.toPath());
         loadMainNumOfTokensPerBlock();
     }
 
@@ -123,64 +132,64 @@ public class IndexReader {
      */
     public Enumeration<Integer> getReviewsWithToken(String token) {
         TreeMap<Integer, Integer> unionOfResults = new TreeMap<>();
-        //get main index results
-        SingleIndexReader singleIndexReader =
-                new SingleIndexReader(mainIndexDictionary,
-                mainConcatString,
-                mainInvertedIndexFile,
-                mainNumOfWordsInFrontCodeBlock);
-        Enumeration<Integer> mainResults = singleIndexReader.getReviewsWithWord(token);
-        addEnumerationToMap(mainResults, unionOfResults);
+        addMainIndexResults(unionOfResults, token);
+        addAuxIndexesResults(unionOfResults, token);
+        return mapToEnumeration(unionOfResults);
+    }
 
-        // add the rest of auxiliary indexes results
-        Enumeration<Integer> auxResults;
+    private void addAuxIndexesResults(TreeMap<Integer, Integer> unionOfResults, String token) {
+        SingleIndexReader singleIndexReader;
         for (int i = 0; i < numOfAuxIndexes; i++) {
             singleIndexReader = new SingleIndexReader(auxIndexesDictionary[i],
                     auxIndexesConcatString[i],
                     auxInvertedIndexFiles[i],
-                    auxNumOfWordsInFrontCodeBlock[i]);
-            auxResults = singleIndexReader.getReviewsWithWord(token);
-            addEnumerationToMap(auxResults, unionOfResults);
+                    invalidationVector,
+                    auxNumOfWordsInFrontCodeBlock[i], mainIndexDirectory);
+            TreeMap<Integer, Integer> auxResults = singleIndexReader.getReviewsWithWord(token);
+            unionOfResults.putAll(auxResults);
         }
-        filterInvalidatedRids(unionOfResults);
-        return mapToEnumeration(unionOfResults);
     }
 
-    private void filterInvalidatedRids(TreeMap<Integer, Integer> unionOfResults) {
-        try{
-            final String validationVectorFilename = mainIndexDirectory + File.separator + Statics.INVALIDATION_VECTOR_FILENAME;
-            BufferedInputStream validationVectorBIS = new BufferedInputStream( new FileInputStream(new File(validationVectorFilename)));
-
-            int byteRead = validationVectorBIS.read();
-            int byteCounter = 1;
-            while(byteRead != -1){
-                if(byteRead == 1){
-                    unionOfResults.remove(byteCounter);
-                }
-                byteRead = validationVectorBIS.read();
-                byteCounter++;
-            }
-        } catch(IOException e){
-            e.printStackTrace();
-        }
+    private void addMainIndexResults(TreeMap<Integer, Integer> unionOfResults, String token) {
+        SingleIndexReader singleIndexReader =
+                new SingleIndexReader(mainIndexDictionary,
+                        mainConcatString,
+                        mainInvertedIndexFile,
+                        invalidationVector,
+                        mainNumOfWordsInFrontCodeBlock, mainIndexDirectory);
+        TreeMap<Integer, Integer> mainResults = singleIndexReader.getReviewsWithWord(token);
+        unionOfResults.putAll(mainResults);
     }
 
     private Enumeration<Integer> mapToEnumeration(TreeMap<Integer, Integer> unionOfResults) {
         Vector<Integer> toEnumerate = new Vector<>();
-        for(Map.Entry<Integer,Integer> entry: unionOfResults.entrySet()){
+        for (Map.Entry<Integer, Integer> entry : unionOfResults.entrySet()) {
             toEnumerate.add(entry.getKey());
             toEnumerate.add(entry.getValue());
         }
         return toEnumerate.elements();
     }
 
-    private void addEnumerationToMap(Enumeration<Integer> integerEnumeration, TreeMap<Integer, Integer> ridToFreqUnion) {
-        while (integerEnumeration.hasMoreElements()) {
-            int rid = integerEnumeration.nextElement();
-            assert integerEnumeration.hasMoreElements();
-            int frequency = integerEnumeration.nextElement();
-            ridToFreqUnion.put(rid, frequency);
+    public IndexMergingModerator getIndexMergingModerator() {
+        IndexMergingModerator indexMergingModerator = new IndexMergingModerator(mainIndexDirectory);
+
+        // adding main index
+        SingleIndexReader singleIndexReader = new SingleIndexReader(mainIndexDictionary,
+                mainConcatString, mainInvertedIndexFile, invalidationVector,mainNumOfWordsInFrontCodeBlock, mainIndexDirectory);
+        indexMergingModerator.add(singleIndexReader);
+
+        // adding auxiliary indexes
+        for (int i = 0; i < numOfAuxIndexes; i++) {
+            singleIndexReader = new SingleIndexReader(auxIndexesDictionary[i],
+                    auxIndexesConcatString[i],
+                    auxInvertedIndexFiles[i],
+                    invalidationVector,
+                    auxNumOfWordsInFrontCodeBlock[i],
+                    mainIndexDirectory);
+            indexMergingModerator.add(singleIndexReader);
         }
+        return indexMergingModerator;
     }
+
 
 }

@@ -174,7 +174,7 @@ public class InvertedIndexOfWord {
      * @return size of all the inverted index values -  gaps and frequencies - as bytes
      * when encoded by Length-Precoded Varint method.
      */
-    int getNumberOfBytesWrittenToOutput() {
+    public int getNumberOfBytesWrittenToOutput() {
         if (!isCalculated) {
             System.err.println("[DEBUG] should have been calculated by now ");
         }

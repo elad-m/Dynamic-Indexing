@@ -2,6 +2,8 @@ package dynamic_index;
 
 import dynamic_index.external_sort.ExternalMergeSort;
 import dynamic_index.external_sort.TermToReviewBlockWriter;
+import dynamic_index.index_reading.IndexMergingModerator;
+import dynamic_index.index_writing.IndexMergeWriter;
 import dynamic_index.index_writing.WordsIndexWriter;
 
 import java.io.*;
@@ -69,7 +71,7 @@ public class IndexWriter {
     private void createIndexFilesDirectory(String dir) {
         File indexDirectory = new File(dir);
         if (!indexDirectory.mkdir()) {
-            System.out.println("Directory 'index' already exists.");
+            System.out.format("Directory %s already exists.", dir);
         }
         this.currentIndexDirectory = indexDirectory;
     }
@@ -287,7 +289,15 @@ public class IndexWriter {
         }
     }
 
-    public void merge(String indexDirectory) {
-
+    /**
+     * Merges all indexes into one index.
+     * @param indexReader - Uses IndexReader to read from all indexes
+     */
+    public void merge(IndexReader indexReader) {
+        // reading rows of all indexes
+        IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModerator();
+        // makes each row read from the moderator written as one index.
+        IndexMergeWriter indexMergeWriter = new IndexMergeWriter(indexMergingModerator, mainIndexDirectory);
+        indexMergeWriter.merge();
     }
 }
