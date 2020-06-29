@@ -78,6 +78,15 @@ public class ScalingCases {
                 delQueries = delWordse1;
                 delReviews = delReviews1;
                 break;
+            case 4:
+                wordQueries = we4;
+                negWordQueries = nwe4;
+                inputFilename = MOVIE_REVIEWS_4;
+                insertFiles = getInsertFileNames();
+                insertQueries = inse1;
+                delQueries = delWordse1;
+                delReviews = delReviews1;
+                break;
             default:
                 inputFilename = "";
                 insertFiles = new File[0];

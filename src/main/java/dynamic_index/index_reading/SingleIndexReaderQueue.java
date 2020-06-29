@@ -12,7 +12,7 @@ import java.util.TreeMap;
 
 class SingleIndexReaderQueue{
 
-    private File mainIndexDirectory;
+    private final File mainIndexDirectory;
     Queue<WordAndInvertedIndex> wordAndInvertedIndexQueue = new PriorityQueue<>();
     SingleIndexReader singleIndexReader;
     int bytesPointer = 0;
@@ -75,22 +75,6 @@ class SingleIndexReaderQueue{
         } else {
             return new InvertedIndexOfWord(map, wordToTokenMetaData.getKey(), mainIndexDirectory);
         }
-    }
-
-    private byte[] getBytesOfInvertedIndex(TokenMetaData pointerAndLength) throws IOException {
-        byte[] rowToReadInto = new byte[pointerAndLength.getFreqLength()];
-        int bytesRead = invertedIndexBIS.read(rowToReadInto, 0, rowToReadInto.length);
-        if(bytesRead == -1){
-            assertLengthOfFile(pointerAndLength);
-            isDoneReadingFile = true;
-        } else if (bytesRead < rowToReadInto.length){
-            System.err.println("Did not read enough inverted index bytes!");
-        }
-        return rowToReadInto;
-    }
-
-    private void assertLengthOfFile(TokenMetaData pointerAndLength) {
-        assert pointerAndLength.getFreqPointer() + pointerAndLength.getFreqLength() == (int)singleIndexReader.getInvertedIndexFile().length();
     }
 
     private void setQueueDone(){

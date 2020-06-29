@@ -32,7 +32,6 @@ public class InvertedIndexOfWord {
     private final Map<Integer, Integer> ridToFrequencyMap = new TreeMap<>();
     protected int amountOfBytesWrittenExternalOutput = 0;
     protected int ioBufferSize = 8192;
-    private int numOfMentions = 0;
     private int numOfReviews = 0;
 
 
@@ -191,7 +190,6 @@ public class InvertedIndexOfWord {
             int currentFrequency = rfEntry.getValue();
             ridGaps[currentRidIndex] = currentRid - previousReviewId;
             frequencies[currentRidIndex] = currentFrequency; // no gaps
-            numOfMentions += currentFrequency;
             numOfReviews++;
             previousReviewId = currentRid;
             currentRidIndex++;

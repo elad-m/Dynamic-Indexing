@@ -7,6 +7,8 @@ import dynamic_index.index_writing.IndexMergeWriter;
 import dynamic_index.index_writing.WordsIndexWriter;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 import static dynamic_index.Statics.*;
@@ -16,21 +18,19 @@ public class IndexWriter {
     public static final int WORD_MAX_SIZE = 127;
     private static final String REVIEW_TEXT_FIELD = "review/text";
 
-    private String mainIndexDirectory;
+    private final String mainIndexDirectory;
     private File currentIndexDirectory;
+
     private WordsIndexWriter wordsDataIndexWriter;
-    private int numOfWordsInFrontCodeBlock = 8;
     private final Map<String, Integer> wordTermToTermID = new HashMap<>();
     private TermToReviewBlockWriter wordsTermToReviewBlockWriter;
 
-    private int reviewCounter = 1;
+    private int reviewCounter = 1; // not necessarily the number of reviews in index in practice because deletion
     private int tokenCounter = 0; // token counter only incremented in the mapping stage
-    private int inputScaleType;
+    private final int inputScaleType;
 
     // DEBUGGING VARIABLES
-    private final boolean SKIP_SORTING = false; // when true, the next two are unused
-    private static final boolean READ_ALL_FILE = true; // when true the next line is ignored
-    private static final int BATCH_SIZE_OF_REVIEWS_TO_READ = 1000000;
+//    private final boolean SKIP_SORTING = false; // when true, the next two are unused
 
     public IndexWriter(String indexDirectory, int inputScaleType) {
         this.mainIndexDirectory = indexDirectory;
@@ -38,19 +38,19 @@ public class IndexWriter {
     }
 
     /**
-     * Writes an index of a given product review data.
+     * Builds an index from a given product raw review data.
      *
      * @param inputFile          - product review raw data
      * @param mainIndexDirectory - directory to create the index in
      */
-    public void write(String inputFile, String mainIndexDirectory) {
+    public void constructIndex(String inputFile, String mainIndexDirectory) {
         createIndexFilesDirectory(mainIndexDirectory);
         instantiateWriters();
         constructIndex(inputFile, reviewCounter);
     }
 
     /**
-     * Writes an auxiliary index of a given product review data
+     * Builds an auxiliary index of a given product review data
      *
      * @param inputFile         - product review raw data
      * @param auxIndexDirectory - directory for the auxiliary index. Should be inside the
@@ -82,17 +82,18 @@ public class IndexWriter {
     private void constructIndex(String inputFile, final int initialReviewCounter) {
         try {
             Map<Integer, String> wordTermIdToTerm;
-            if (!SKIP_SORTING) {
+//            if (!SKIP_SORTING) {
                 constructTermToTermIDMapping(inputFile); // token and review counter complete
                 writeHashmapFor100Random();
                 firstSortIteration(inputFile, initialReviewCounter); // review counter resets, second input reading
                 externalSort();
                 wordTermIdToTerm = swapHashMapDirections(wordTermToTermID);
-            } else { // when skipping sorting
-                tokenCounter = getTokenCounter(currentIndexDirectory, false);  // also token counter
-                reviewCounter = 1 + getReviewCounter(currentIndexDirectory, false);
-                wordTermIdToTerm = loadMapFromFile(currentIndexDirectory, WORDS_MAPPING);
-            }
+//            }
+//            else { // when skipping sorting
+//                tokenCounter = getTokenCounter(currentIndexDirectory, false);  // also token counter
+//                reviewCounter = 1 + getReviewCounter(currentIndexDirectory, false);
+//                wordTermIdToTerm = loadMapFromFile(currentIndexDirectory, WORDS_MAPPING);
+//            }
             System.gc();
             constructIndexFromSorted(wordTermIdToTerm, initialReviewCounter);
         } catch (IOException e) {
@@ -123,7 +124,7 @@ public class IndexWriter {
         Set<String> wordTerms = new TreeSet<>();
 
         String line = bufferedReaderOfRawInput.readLine();
-        while (shouldContinueReading(line, reviewCounter)) {
+        while ((line != null)) {
             if (!line.isEmpty()) {
                 String[] splitArray = line.split(":", 2);
                 String field = splitArray[0];
@@ -169,7 +170,7 @@ public class IndexWriter {
 
         resetReviewCounterTo(initialReviewCounter);
         String line = bufferedReaderOfRawInput.readLine();
-        while (shouldContinueReading(line, reviewCounter)) {
+        while ((line != null)) {
             if (!line.isEmpty()) {
                 String[] splitArray = line.split(":", 2);
                 String field = splitArray[0];
@@ -185,11 +186,6 @@ public class IndexWriter {
         bufferedReaderOfRawInput.close();
         wordsTermToReviewBlockWriter.closeWriter();
         printElapsedTime(blockWriterStartTime, "First Sort Iteration Time: ");
-    }
-
-    private boolean shouldContinueReading(String line, int reviewCounter) {
-        return READ_ALL_FILE ? (line != null) :
-                (line != null && reviewCounter <= BATCH_SIZE_OF_REVIEWS_TO_READ);
     }
 
     private void feedTextToBlockWriter(String reviewTextLine) {
@@ -231,16 +227,16 @@ public class IndexWriter {
     private void constructIndexFromSorted(Map<Integer, String> wordsTermIdToTerm, int initialReviewCounter) throws IOException {
         // words
         int readBlockSize = estimateBestSizeOfWordsBlocks(tokenCounter, false);
-        numOfWordsInFrontCodeBlock = calculateNumOfTokensInFrontCodeBlock(tokenCounter);
+        int numOfWordsInFrontCodeBlock = calculateNumOfTokensInFrontCodeBlock(tokenCounter);
         wordsDataIndexWriter.loadSortedFileByBlocks(numOfWordsInFrontCodeBlock, readBlockSize, wordsTermIdToTerm, reviewCounter);
 
-        if (!SKIP_SORTING)
-            writeMetaData();
+//        if (!SKIP_SORTING)
+//            writeMetaData();
         writeToInvalidationVector(mainIndexDirectory, initialReviewCounter);
         deleteSortedFile(currentIndexDirectory);
     }
 
-    public void writeToInvalidationVector(String mainIndexPath, int initialReviewCounter) throws IOException {
+    private void writeToInvalidationVector(String mainIndexPath, int initialReviewCounter) throws IOException {
         int numberOfReviewsAdded = reviewCounter - initialReviewCounter;
         RandomAccessFile raValidationVectorFile = new RandomAccessFile(
                 mainIndexPath + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
@@ -250,15 +246,15 @@ public class IndexWriter {
         }
     }
 
-    private void writeMetaData()
-            throws IOException {
-        RandomAccessFile raMetaFile = new RandomAccessFile(
-                currentIndexDirectory.getPath() + File.separator + MAIN_INDEX_META_DATA_FILENAME, "rw");
-        raMetaFile.writeInt(reviewCounter - 1);
-        raMetaFile.writeInt(tokenCounter);
-        raMetaFile.writeInt(numOfWordsInFrontCodeBlock);
-        raMetaFile.close();
-    }
+//    private void writeMetaData()
+//            throws IOException {
+//        RandomAccessFile raMetaFile = new RandomAccessFile(
+//                currentIndexDirectory.getPath() + File.separator + MAIN_INDEX_META_DATA_FILENAME, "rw");
+//        raMetaFile.writeInt(reviewCounter - 1);
+//        raMetaFile.writeInt(tokenCounter);
+//        raMetaFile.writeInt(numOfWordsInFrontCodeBlock);
+//        raMetaFile.close();
+//    }
 
     private void incrementTokenCounter() {
         tokenCounter++;
@@ -272,11 +268,11 @@ public class IndexWriter {
         this.reviewCounter = initialReviewCounter;
     }
 
-    /** Looks for the corresponding BYTES in the validation vector file and "flips" them to 1
+    /** Looks for the corresponding BYTES in the invalidation vector file and "flips" them to 1
      * @param indexDirectory - directory of the main index, aka "indexes"
      * @param ridsToDelete - review ids to delete. If not in range, will ignore.
      */
-    public void delete(String indexDirectory, int[] ridsToDelete) {
+    public void removeReviews(String indexDirectory, int[] ridsToDelete) {
         try{
             RandomAccessFile raValidationVectorFile = new RandomAccessFile(
                     indexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
@@ -284,6 +280,7 @@ public class IndexWriter {
                 raValidationVectorFile.seek(rid - 1);
                 raValidationVectorFile.writeByte(1);
             }
+            setInvalidationVectorIsDirty(true);
         } catch (IOException e){
             e.printStackTrace();
         }
@@ -298,6 +295,26 @@ public class IndexWriter {
         IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModerator();
         // makes each row read from the moderator written as one index.
         IndexMergeWriter indexMergeWriter = new IndexMergeWriter(indexMergingModerator, mainIndexDirectory);
-        indexMergeWriter.merge();
+        File mergedDirectory = indexMergeWriter.merge();
+        setInvalidationVectorIsDirty(false);
+        IndexRemover indexRemover = new IndexRemover();
+        indexRemover.removeFilesAfterMerge(mainIndexDirectory);
+        moveMergedFilesToMainIndex(mergedDirectory);
+    }
+
+    private void moveMergedFilesToMainIndex(File mergedDirectory){
+        Path mainDirectory = (new File(mainIndexDirectory)).toPath();
+        try {
+            File[] mergedIndexFiles = mergedDirectory.listFiles();
+            if(mergedIndexFiles != null){
+                for(File mergedIndexFile: mergedIndexFiles){
+                    Files.move(mergedIndexFile.toPath(), mainDirectory.resolve(mergedIndexFile.getName()));
+                }
+            }
+            Files.delete(mergedDirectory.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(3);
+        }
     }
 }

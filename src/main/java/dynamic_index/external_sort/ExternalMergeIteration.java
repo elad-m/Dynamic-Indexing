@@ -126,7 +126,8 @@ public class ExternalMergeIteration {
         final int BLOCK_SIZE_IN_PAIRS;
         final int runNum;
         final Queue<TermIdReviewIdPair> queue;
-        RandomAccessFile raInputFile;
+//        RandomAccessFile raInputFile;
+        BufferedInputStream inputFileBuffer;
         boolean closed =false;
         boolean isDoneReadingFile = false; // there are no more bytes to read from input file
         boolean isQueueDone = false; // the above plus the inner queue is empty
@@ -135,7 +136,8 @@ public class ExternalMergeIteration {
             BLOCK_SIZE_IN_PAIRS = blockSizeInPairs;
             this.runNum = runNum;
             try {
-                this.raInputFile =  new RandomAccessFile(inputFile, "r");
+//                this.raInputFile =  new RandomAccessFile(inputFile, "r");
+                this.inputFileBuffer = new BufferedInputStream(new FileInputStream(inputFile));
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
@@ -165,7 +167,7 @@ public class ExternalMergeIteration {
         }
 
         private void load() {
-            ByteBuffer blockByteBuffer = getByteBuffer(raInputFile);
+            ByteBuffer blockByteBuffer = getByteBuffer();
             for (int i = 0; i < BLOCK_SIZE_IN_PAIRS; i++) {
                 /* there will be bad zeros at the last block of the file */
                 if (blockByteBuffer.getInt(i * Statics.PAIR_OF_INT_SIZE_IN_BYTES) == 0){
@@ -185,11 +187,11 @@ public class ExternalMergeIteration {
             close();
         }
 
-        private ByteBuffer getByteBuffer(RandomAccessFile randomAccessFile) {
+        private ByteBuffer getByteBuffer() {
             final int blockSizeInBytes = this.BLOCK_SIZE_IN_PAIRS * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
             byte[] blockFromFile = new byte[blockSizeInBytes];
             try {
-                int numOfBytesRead = randomAccessFile.read(blockFromFile);
+                int numOfBytesRead = inputFileBuffer.read(blockFromFile);
                 if (numOfBytesRead < blockSizeInBytes){
                     this.isDoneReadingFile = true;
                 }
@@ -201,7 +203,7 @@ public class ExternalMergeIteration {
 
         void close(){
             try {
-                raInputFile.close();
+                inputFileBuffer.close();
                 closed = true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -214,7 +216,6 @@ public class ExternalMergeIteration {
         private final List<TermIdReviewIdPair> termIdReviewIdPairs;
         public final int BLOCK_SIZE_IN_INT_PAIRS;
 
-//        private RandomAccessFile currentFile;
         private BufferedOutputStream currentFile;
         private File mergeFilesDirectory;
         private final int iterationNumber;
@@ -249,7 +250,6 @@ public class ExternalMergeIteration {
                     + sortedFilesCounter + BINARY_FILE_SUFFIX;
             countNewFile(); // yes, counting after taking the name
             try {
-//                currentFile = new RandomAccessFile(new File(newFileName), "rw");
                 currentFile = new BufferedOutputStream(new FileOutputStream(newFileName),
                         BLOCK_SIZE_IN_INT_PAIRS*Statics.PAIR_OF_INT_SIZE_IN_BYTES);
             } catch (FileNotFoundException e) {
@@ -289,14 +289,6 @@ public class ExternalMergeIteration {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-//                byte[] pairsAsBytes = TermToReviewBlockWriter.toByteArray(this.termIdReviewIdPairs);
-//                assert pairsAsBytes.length > 0;
-//                try {
-//                    currentFile.write(pairsAsBytes);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//                termIdReviewIdPairs.clear();
             }
         }
 

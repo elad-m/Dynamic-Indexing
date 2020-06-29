@@ -69,27 +69,29 @@ public class IndexReader {
     }
 
     private void loadSingleAuxIndex(File auxIndexDirectory, int index_i) throws IOException {
-        File mainDictionaryFile = new File(auxIndexDirectory.getPath()
+        File auxDictionaryFile = new File(auxIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_FRONT_CODED_FILENAME);
-        File mainStringConcatFile = new File(auxIndexDirectory.getPath()
+        File auxStringConcat = new File(auxIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_CONCAT_FILENAME);
-        auxIndexesDictionary[index_i] = Files.readAllBytes(mainDictionaryFile.toPath());
-        auxIndexesConcatString[index_i] = Files.readAllBytes(mainStringConcatFile.toPath());
+        assert auxDictionaryFile.exists() && auxStringConcat.exists();
+        auxIndexesDictionary[index_i] = Files.readAllBytes(auxDictionaryFile.toPath());
+        auxIndexesConcatString[index_i] = Files.readAllBytes(auxStringConcat.toPath());
         auxInvertedIndexFiles[index_i] = new File(auxIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
         loadAuxNumOfTokensPerBlock(auxIndexDirectory, index_i);
     }
 
-    private void loadAuxNumOfTokensPerBlock(File indexDirectory, int index_i) throws IOException {
-        File indexMetaFile = new File(indexDirectory.getPath() + File.separator + Statics.MAIN_INDEX_META_DATA_FILENAME);
-        RandomAccessFile raIndexMeta;
-        raIndexMeta = new RandomAccessFile(indexMetaFile, "r");
-        raIndexMeta.seek(Statics.INTEGER_SIZE * 2);
-        auxNumOfWordsInFrontCodeBlock[index_i] = raIndexMeta.readInt();
-        System.out.format("Front block size for index%d: %d" + System.lineSeparator(),
-                index_i,
-                auxNumOfWordsInFrontCodeBlock[index_i]);
-        raIndexMeta.close();
+    private void loadAuxNumOfTokensPerBlock(File indexDirectory, int index_i) {
+        auxNumOfWordsInFrontCodeBlock[index_i] = Statics.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
+//        File indexMetaFile = new File(indexDirectory.getPath() + File.separator + Statics.MAIN_INDEX_META_DATA_FILENAME);
+//        RandomAccessFile raIndexMeta;
+//        raIndexMeta = new RandomAccessFile(indexMetaFile, "r");
+//        raIndexMeta.seek(Statics.INTEGER_SIZE * 2);
+//        auxNumOfWordsInFrontCodeBlock[index_i] = raIndexMeta.readInt();
+//        System.out.format("Front block size for index%d: %d" + System.lineSeparator(),
+//                index_i,
+//                auxNumOfWordsInFrontCodeBlock[index_i]);
+//        raIndexMeta.close();
     }
 
     private void loadMainIndex() throws IOException {
@@ -110,15 +112,16 @@ public class IndexReader {
         loadMainNumOfTokensPerBlock();
     }
 
-    private void loadMainNumOfTokensPerBlock() throws IOException {
-        File indexMetaFile = new File(mainIndexDirectory.getPath() + File.separator + Statics.MAIN_INDEX_META_DATA_FILENAME);
-        RandomAccessFile raIndexMeta;
-        raIndexMeta = new RandomAccessFile(indexMetaFile, "r");
-        raIndexMeta.seek(Statics.INTEGER_SIZE * 2);
-        mainNumOfWordsInFrontCodeBlock = raIndexMeta.readInt();
-        System.out.format("Front block size main: %d" + System.lineSeparator(),
-                mainNumOfWordsInFrontCodeBlock);
-        raIndexMeta.close();
+    private void loadMainNumOfTokensPerBlock() {
+        mainNumOfWordsInFrontCodeBlock = Statics.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
+//        File indexMetaFile = new File(mainIndexDirectory.getPath() + File.separator + Statics.MAIN_INDEX_META_DATA_FILENAME);
+//        RandomAccessFile raIndexMeta;
+//        raIndexMeta = new RandomAccessFile(indexMetaFile, "r");
+//        raIndexMeta.seek(Statics.INTEGER_SIZE * 2);
+//        mainNumOfWordsInFrontCodeBlock = raIndexMeta.readInt();
+//        System.out.format("Front block size main: %d" + System.lineSeparator(),
+//                mainNumOfWordsInFrontCodeBlock);
+//        raIndexMeta.close();
     }
 
 
@@ -171,7 +174,7 @@ public class IndexReader {
     }
 
     public IndexMergingModerator getIndexMergingModerator() {
-        IndexMergingModerator indexMergingModerator = new IndexMergingModerator(mainIndexDirectory);
+        IndexMergingModerator indexMergingModerator = new IndexMergingModerator();
 
         // adding main index
         SingleIndexReader singleIndexReader = new SingleIndexReader(mainIndexDictionary,

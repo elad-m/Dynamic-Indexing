@@ -8,18 +8,18 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static dynamic_index.Statics.printElapsedTimeToLog;
 
-@SuppressWarnings("SpellCheckingInspection")
+@SuppressWarnings({"SpellCheckingInspection", "SameParameterValue"})
 public class Main {
 
-    static final String INDEXES_DIR_NAME = "indexes";
+
     static final String INSERTION_DIR_NAME = "E1TestResources";
     static final String AUXILIARY_INDEX_DIR_PATTERN = "aux";
     static PrintWriter tlog = null;
-    public static final int INPUT_SCALE = 1;
+    public static final int INPUT_SCALE = 4;
 
     public static void main(String[] args) {
         final String localDir = System.getProperty("user.dir");
-        final String indexDirectory = localDir + File.separatorChar + INDEXES_DIR_NAME;
+        final String indexDirectory = localDir + File.separatorChar + Statics.INDEXES_DIR_NAME;
         final String insertionDirectory = localDir + File.separatorChar + INSERTION_DIR_NAME;
 
         test(indexDirectory, insertionDirectory);
@@ -31,15 +31,19 @@ public class Main {
         ScalingCases scalingCases = new ScalingCases(INPUT_SCALE, insertionDirectory);
         createTestLog(indexDirectory, scalingCases.getTestType());
 
-//        IndexWriter indexWriter = new IndexWriter(indexDirectory, INPUT_SCALE);
-//        buildIndex(indexDirectory, indexWriter, scalingCases.getInputFilename());
-
-//        IndexReader indexReader = insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
+        IndexWriter indexWriter = new IndexWriter(indexDirectory, INPUT_SCALE);
+        buildIndex(indexDirectory, indexWriter, scalingCases.getInputFilename());
         IndexReader indexReader = new IndexReader(indexDirectory);
-//        indexReader = mergeIndex(indexDirectory, indexWriter, indexReader);
+//        queryWordIndex(indexReader, scalingCases);
+
+//        indexReader = insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
+//        IndexReader indexReader = new IndexReader(indexDirectory);
         queryWordIndex(indexReader, scalingCases);
 //        deleteReviews(indexDirectory, indexWriter, scalingCases);
-        queryAfterDelete(indexReader, scalingCases);
+//        queryAfterDelete(indexReader, scalingCases);
+
+//        indexReader = mergeIndex(indexDirectory, indexWriter, indexReader);
+//        queryAfterDelete(indexReader, scalingCases);
 
         tlog.close();
     }
@@ -53,7 +57,7 @@ public class Main {
 
     private static void deleteReviews(String indexDirectory, IndexWriter indexWriter, ScalingCases scalingCases) {
         System.out.println("=====\n" + "Index deletion " + "\n=====");
-        indexWriter.delete(indexDirectory, scalingCases.getDelReviews());
+        indexWriter.removeReviews(indexDirectory, scalingCases.getDelReviews());
     }
 
     private static IndexReader insertToIndex(String indexDirectory, IndexWriter indexWriter,
@@ -65,8 +69,7 @@ public class Main {
                     getAuxiliaryIndexDirPattern(indexDirectory, i),
                     scalingCases.getInsertFileName(i));
         }
-        IndexReader indexReader = new IndexReader(indexDirectory);
-        return indexReader;
+        return new IndexReader(indexDirectory);
     }
 
     private static String getAuxiliaryIndexDirPattern(String indexDirectory, int num) {
@@ -119,12 +122,12 @@ public class Main {
 
     private static void removeIndex(String indexDirectoryName) {
         IndexRemover indexRemover = new IndexRemover();
-        indexRemover.removeIndex(indexDirectoryName);
+        indexRemover.removeAllIndexFiles(indexDirectoryName);
     }
 
     private static void buildIndex(String indexDirectoryName, IndexWriter indexWriter,  String rawDataFilename) {
         long startTime = System.currentTimeMillis();
-        indexWriter.write(rawDataFilename, indexDirectoryName);
+        indexWriter.constructIndex(rawDataFilename, indexDirectoryName);
         printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
     }
 

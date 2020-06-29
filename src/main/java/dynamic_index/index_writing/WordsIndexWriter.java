@@ -61,8 +61,8 @@ public class WordsIndexWriter {
         this.numOfTokensInFrontCodeBlock = numOfTokensInFrontCodeBlock;
         InvertedIndexOfWord.MAX_NUM_OF_PAIRS *= Math.max(1, reviewCounter / 1000);
         System.out.println("MAX_NUM_OF_PAIRS Words: " + InvertedIndexOfWord.MAX_NUM_OF_PAIRS);
-        final int pairSize = Statics.PAIR_OF_INT_SIZE_IN_BYTES;
-        int readingBlockSizeInBytes = readBlockSizeInPairs * pairSize;
+
+        int readingBlockSizeInBytes = readBlockSizeInPairs * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
         instantiateIndexFiles(readingBlockSizeInBytes);
         File sortedFile = new File(indexDirectory + File.separator
                 + Statics.WORDS_SORTED_FILE_NAME);
@@ -76,14 +76,14 @@ public class WordsIndexWriter {
     private void loadSortedFileByBlocks(File sortedFile,
                                         int readingBlockSizeInBytes,
                                         Map<Integer, String> termIdToTerm) {
-        try (RandomAccessFile raSortedFile = new RandomAccessFile(sortedFile, "r")) {
+        try (BufferedInputStream sortedFileBIS = new BufferedInputStream(new FileInputStream(sortedFile))) {
             byte[] blockAsBytes = new byte[readingBlockSizeInBytes];
-            int amountOfBytesRead = raSortedFile.read(blockAsBytes);
+            int amountOfBytesRead = sortedFileBIS.read(blockAsBytes);
             while (amountOfBytesRead != -1) {
 //                System.out.println("numbOfWordsWrittenDebug: " + numbOfWordsWrittenDebug);
                 loadBlockToMap(blockAsBytes, amountOfBytesRead, termIdToTerm);
                 writeMapToFiles();
-                amountOfBytesRead = raSortedFile.read(blockAsBytes);
+                amountOfBytesRead = sortedFileBIS.read(blockAsBytes);
             }
             setInLastWriteIteration();
             writeRemainderAndClose();

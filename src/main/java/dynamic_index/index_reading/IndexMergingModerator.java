@@ -13,10 +13,9 @@ import java.util.List;
 public class IndexMergingModerator {
 
     private final List<SingleIndexReaderQueue> singleIndexReaderQueues = new ArrayList<>();
-    private File mainIndexDirectory;
 
-    public IndexMergingModerator(File mainIndexDirectory){
-        this.mainIndexDirectory = mainIndexDirectory;
+    public IndexMergingModerator(){
+
     }
 
 

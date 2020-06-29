@@ -19,12 +19,12 @@ public class SingleIndexReader {
 
 
     private static final int TWO_BYTES_READ = 2;
-    private int NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
-    private int FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
+    private final int NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
+    private final int FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
 
 
 
-    private int FRONT_CODE_ROW_SIZE_IN_BYTES;
+    private final int FRONT_CODE_ROW_SIZE_IN_BYTES;
 
 
     private static final short BITWISE_AND_OPERAND_TO_DECODE_SHORT = -16385; // 101111..
@@ -190,24 +190,23 @@ public class SingleIndexReader {
         byte[] rowToReadInto = getBytesOfInvertedIndexRAF(pointerAndLength); // todo: get bytes by buffer!
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
-        filterResults(results);
+        if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion
+            filterResults(results);
+        }
         return results;
     }
 
     private void filterResults(TreeMap<Integer, Integer> unfilteredResults){
         try{
-            BufferedInputStream validationVectorBIS = new BufferedInputStream(new FileInputStream(invalidationVector));
-            int byteRead = validationVectorBIS.read();
-            int byteCounter = 1;
-            while (byteRead != -1) {
-                if(unfilteredResults.isEmpty()){
-                    break; // no need to continue reading
+            RandomAccessFile raToInvalidationVector = new RandomAccessFile(invalidationVector, "r");
+            int byteRead;
+            for(Iterator<Map.Entry<Integer, Integer>> it = unfilteredResults.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<Integer, Integer> entry = it.next();
+                raToInvalidationVector.seek(entry.getKey() - 1); // byte zero holds rid=1
+                byteRead = raToInvalidationVector.read();
+                if(byteRead == 1){
+                    it.remove();
                 }
-                if (byteRead == 1) {
-                    unfilteredResults.remove(byteCounter);
-                }
-                byteRead = validationVectorBIS.read();
-                byteCounter++;
             }
         } catch (IOException e) {
             e.printStackTrace();

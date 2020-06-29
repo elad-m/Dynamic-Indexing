@@ -9,6 +9,7 @@ import dynamic_index.index_structure.InvertedIndexOfWord;
 import java.io.*;
 import java.util.TreeSet;
 
+
 /**
  * Writes a merge of all indexes using IndexMergingModerator as a source. Works in a similar way to
  * WordsIndexWriter.
@@ -32,7 +33,7 @@ public class IndexMergeWriter {
     public IndexMergeWriter(IndexMergingModerator indexMergingModerator, String mainIndexDirectory) {
         this.indexMergingModerator = indexMergingModerator;
 
-        File indexDirectory = new File(mainIndexDirectory + File.separator + "merged");
+        File indexDirectory = new File(mainIndexDirectory + File.separator + Statics.MERGED_INDEX_DIRECTORY);
         if (!indexDirectory.mkdir()) {
             System.out.format("Directory %s already exists.", mainIndexDirectory);
         }
@@ -99,7 +100,7 @@ public class IndexMergeWriter {
     }
 
 
-    public void merge() {
+    public File merge() {
         instantiateIndexFiles();
         WordAndInvertedIndex currentWordAndInverted = indexMergingModerator.getNextMergingRow();
         while (currentWordAndInverted != null) {// todo
@@ -111,6 +112,7 @@ public class IndexMergeWriter {
             currentWordAndInverted = indexMergingModerator.getNextMergingRow();
         }
         writeRemainderAndClose();
+        return mergedIndexDirectory;
     }
 
 
