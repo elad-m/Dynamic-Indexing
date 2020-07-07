@@ -1,11 +1,12 @@
 package dynamic_index.index_reading;
 
-import dynamic_index.index_structure.WordAndInvertedIndex;
+import dynamic_index.index_structure.InvertedIndex;
 
-import java.io.File;
+
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Queues all the SingleIndexReader of all indexes to return a merged row of index.
@@ -27,13 +28,13 @@ public class IndexMergingModerator {
         }
     }
 
-    public WordAndInvertedIndex getNextMergingRow(){
-        WordAndInvertedIndex currMinPair;
+    public Map.Entry<String, InvertedIndex> getNextMergingWordAndIndex(){
+        Map.Entry<String, InvertedIndex> currMinPair;
         SingleIndexReaderQueue minimumQueue = getMinimumQueue();
         if(minimumQueue == null){
             currMinPair =  null;
         } else {
-            currMinPair = minimumQueue.poll(); // actually getting it out of data-structure;
+            currMinPair = minimumQueue.poll(); // actual removal from data-structure;
         }
         return currMinPair;
     }
@@ -46,9 +47,9 @@ public class IndexMergingModerator {
         } else {
             for (SingleIndexReaderQueue currentQueue: singleIndexReaderQueues){
                 if(currentQueue.isQueueNotDone()){
-                    WordAndInvertedIndex minPairForCurrentQueue = currentQueue.peek();
+                    String minPairForCurrentQueue = currentQueue.peek();
                     assert minPairForCurrentQueue != null;
-                    WordAndInvertedIndex prevMinPair = minQueue.peek();
+                    String prevMinPair = minQueue.peek();
                     if ( minPairForCurrentQueue.compareTo(prevMinPair) < 0){
                         minQueue = currentQueue;
                     }

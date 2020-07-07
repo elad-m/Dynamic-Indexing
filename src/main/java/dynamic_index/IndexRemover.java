@@ -6,20 +6,14 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
 
 
 public class IndexRemover {
 
-//    private final Set<String> afterMergeExceptionFiles = new HashSet<>();
     private boolean useExceptions = false;
 
-    public IndexRemover(){
 
-    }
-
-    void removeFilesAfterMerge(String dir){
+    void removeFilesAfterMerge(String dir) {
         useExceptions = true;
         File file = new File(dir);
         deleteFileOrDirectory(file);
@@ -46,7 +40,7 @@ public class IndexRemover {
     private void deleteDirectory(File toDelete) {
         try {
             // not deleting the merged index directory and files
-            if(useExceptions && !toDelete.getName().equals(Statics.MERGED_INDEX_DIRECTORY)){
+            if (useExceptions && !toDelete.getName().equals(Statics.MERGED_INDEX_DIRECTORY)) {
                 File[] childFiles = toDelete.listFiles();
                 if (childFiles != null) {
                     if (childFiles.length == 0) { //Directory is empty. Proceed for deletion
@@ -56,7 +50,7 @@ public class IndexRemover {
                             deleteFileOrDirectory(childFilePath);
                         }
                         // not deleting the indexes directory itself after deleting its contents
-                        if(useExceptions && !toDelete.getName().equals(Statics.INDEXES_DIR_NAME)){
+                        if (useExceptions && !toDelete.getName().equals(Statics.INDEXES_DIR_NAME)) {
                             deleteDirectory(toDelete); // calling again, now should be empty
                         }
                     }
@@ -69,7 +63,7 @@ public class IndexRemover {
 
     private void singleDelete(File singleFileToDelete) {
         Path dirPathToDelete = singleFileToDelete.toPath();
-        if(!singleFileToDelete.getName().equals(Statics.INVALIDATION_VECTOR_FILENAME)){
+        if (!singleFileToDelete.getName().equals(Statics.INVALIDATION_VECTOR_FILENAME)) {
             try {
                 Files.delete(dirPathToDelete);
             } catch (NoSuchFileException x) {

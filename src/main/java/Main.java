@@ -15,7 +15,7 @@ public class Main {
     static final String INSERTION_DIR_NAME = "E1TestResources";
     static final String AUXILIARY_INDEX_DIR_PATTERN = "aux";
     static PrintWriter tlog = null;
-    public static final int INPUT_SCALE = 4;
+    public static final int INPUT_SCALE = 1;
 
     public static void main(String[] args) {
         final String localDir = System.getProperty("user.dir");
@@ -34,23 +34,26 @@ public class Main {
         IndexWriter indexWriter = new IndexWriter(indexDirectory, INPUT_SCALE);
         buildIndex(indexDirectory, indexWriter, scalingCases.getInputFilename());
         IndexReader indexReader = new IndexReader(indexDirectory);
-//        queryWordIndex(indexReader, scalingCases);
+        queryWordIndex(indexReader, scalingCases);
 
-//        indexReader = insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
+        indexReader = insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
 //        IndexReader indexReader = new IndexReader(indexDirectory);
         queryWordIndex(indexReader, scalingCases);
-//        deleteReviews(indexDirectory, indexWriter, scalingCases);
-//        queryAfterDelete(indexReader, scalingCases);
 
-//        indexReader = mergeIndex(indexDirectory, indexWriter, indexReader);
-//        queryAfterDelete(indexReader, scalingCases);
+        deleteReviews(indexDirectory, indexWriter, scalingCases);
+        queryAfterDelete(indexReader, scalingCases);
+
+        indexReader = mergeIndex(indexDirectory, indexWriter, indexReader);
+        queryAfterDelete(indexReader, scalingCases);
 
         tlog.close();
     }
 
     private static IndexReader mergeIndex(String indexDirectory, IndexWriter indexWriter, IndexReader indexReader) {
+        long startTime = System.currentTimeMillis();
         System.out.println("=====\n" + "Merging All Indexes " + "\n=====");
         indexWriter.merge(indexReader);
+        printElapsedTimeToLog(tlog, startTime, "\n\tIndex Merging");
         return new IndexReader(indexDirectory);
     }
 

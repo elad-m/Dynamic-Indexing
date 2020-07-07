@@ -1,6 +1,7 @@
 package dynamic_index.index_structure;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -27,7 +28,7 @@ public class FrontCodeBlock {
     private int bytesOfInvertedIndexWrittenSoFar;
 
 
-    public FrontCodeBlock(TreeMap<String, ? extends InvertedIndexOfWord> blockOfWordsAndData,
+    public FrontCodeBlock(TreeMap<String,? extends WritingMeasurable> blockOfWordsAndData,
                    int blocksReadInBytesSoFar, int numOfTokensInFrontCodeBlock) {
         this.frontCodeBlockTokenCapacity = numOfTokensInFrontCodeBlock;
         this.blockSize = blockOfWordsAndData.size(); // might be lower than capacity in the end of index
@@ -43,40 +44,13 @@ public class FrontCodeBlock {
         createCompression(blockOfWordsAndData);
     }
 
-    public FrontCodeBlock(TreeSet<WordAndInvertedIndex> wordAndInvertedIndexTreeSet,
-                          int blocksReadInBytesSoFar, int numOfTokensInFrontCodeBlock) {
-        this.frontCodeBlockTokenCapacity = numOfTokensInFrontCodeBlock;
-        this.blockSize = wordAndInvertedIndexTreeSet.size();
-        assert this.blockSize > 0 : "empty words block";
-        this.stringPointer = new byte[Integer.BYTES];
-        this.lengthsInBlock = new byte[blockSize];
-        this.prefixLengthsInBlock = new byte[blockSize];
-        this.pointersInBlock = new byte[Integer.BYTES * blockSize];
-        this.pointersLengthsInBlock = new byte[Integer.BYTES * blockSize];
 
-        this.bytesOfInvertedIndexWrittenSoFar = blocksReadInBytesSoFar;
-
-        createCompression(wordAndInvertedIndexTreeSet);
-    }
-
-    private void createCompression(TreeSet<WordAndInvertedIndex> wordAndInvertedIndexTreeSet) {
-        String firstWord = wordAndInvertedIndexTreeSet.first().getWord();
-        int i =0;
-        for(WordAndInvertedIndex wordAndInvertedIndex: wordAndInvertedIndexTreeSet){
-            int sizeOfInverted = wordAndInvertedIndex.getInvertedIndexLength();
-            compressWord(firstWord, wordAndInvertedIndex.getWord(), sizeOfInverted, i);
-            i++;
-        }
-    }
-
-
-    private void createCompression(TreeMap<String, ? extends InvertedIndexOfWord> blockOfWordsAndData) {
+    private void createCompression(TreeMap<String, ? extends WritingMeasurable> blockOfWordsAndData) {
         String firstWord = blockOfWordsAndData.firstKey();
         int i = 0;
-        for (String word : blockOfWordsAndData.keySet()) {
-            InvertedIndexOfWord invertedIndex = blockOfWordsAndData.get(word);
-            int sizeOfInvertedOfWord = invertedIndex.getNumberOfBytesWrittenToOutput();
-            compressWord(firstWord, word, sizeOfInvertedOfWord, i);
+        for (Map.Entry<String, ? extends WritingMeasurable> entry: blockOfWordsAndData.entrySet()) {
+            int sizeOfInvertedOfWord = entry.getValue().getNumberOfBytesWrittenToOutput();
+            compressWord(firstWord, entry.getKey(), sizeOfInvertedOfWord, i);
             i++;
         }
     }

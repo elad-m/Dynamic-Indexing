@@ -2,12 +2,13 @@ package dynamic_index.index_writing;
 
 import dynamic_index.Statics;
 import dynamic_index.index_reading.IndexMergingModerator;
-import dynamic_index.index_structure.WordAndInvertedIndex;
 import dynamic_index.index_structure.FrontCodeBlock;
-import dynamic_index.index_structure.InvertedIndexOfWord;
+import dynamic_index.index_structure.InvertedIndex;
+import dynamic_index.index_structure.InvertedIndexesToMerge;
 
 import java.io.*;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.TreeMap;
 
 
 /**
@@ -27,7 +28,7 @@ public class IndexMergeWriter {
     private BufferedWriter bufferedStringConcatWriter;
     private final int numOfTokensInFrontCodeBlock = 8;
 
-    private final TreeSet<WordAndInvertedIndex> wordAndInvertedIndexSet = new TreeSet<>();
+    private final TreeMap<String, InvertedIndexesToMerge> wordToInvertedIndexMergerMap = new TreeMap<>();
 
 
     public IndexMergeWriter(IndexMergingModerator indexMergingModerator, String mainIndexDirectory) {
@@ -69,14 +70,13 @@ public class IndexMergeWriter {
     }
 
     private void writeBlockOfInvertedIndexToFile(){
-        for (WordAndInvertedIndex wordAndInvertedIndex : wordAndInvertedIndexSet) {
-            InvertedIndexOfWord invertedIndexOfWord = wordAndInvertedIndex.getInvertedIndex();
-            invertedIndexOfWord.writeTo(invertedOutputStream);
+        for (InvertedIndexesToMerge invertedIndexesToMerge : wordToInvertedIndexMergerMap.values()) {
+            invertedIndexesToMerge.writeTo(invertedOutputStream);
         }
     }
 
     private void writeFrontCodeFile() throws IOException {
-        FrontCodeBlock frontCodeBlock = new FrontCodeBlock(wordAndInvertedIndexSet,
+        FrontCodeBlock frontCodeBlock = new FrontCodeBlock(wordToInvertedIndexMergerMap,
                 numOfBytesWrittenInInvertedIndexFile,
                 numOfTokensInFrontCodeBlock);
         numOfBytesWrittenInInvertedIndexFile = frontCodeBlock.getBytesOfInvertedIndexWrittenSoFar();
@@ -95,24 +95,43 @@ public class IndexMergeWriter {
     }
 
     void resetIteration() {
-        wordAndInvertedIndexSet.clear();
+        wordToInvertedIndexMergerMap.clear();
         allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
     }
 
 
     public File merge() {
         instantiateIndexFiles();
-        WordAndInvertedIndex currentWordAndInverted = indexMergingModerator.getNextMergingRow();
-        while (currentWordAndInverted != null) {// todo
-            wordAndInvertedIndexSet.add(currentWordAndInverted);
-            if (wordAndInvertedIndexSet.size() % numOfTokensInFrontCodeBlock == 0) {
-                writeMapToFiles();
-                resetIteration();
-            }
-            currentWordAndInverted = indexMergingModerator.getNextMergingRow();
+        Map.Entry<String, InvertedIndex> currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
+        while (currentWordAndInverted != null) {
+            insertToMap(currentWordAndInverted);
+            if (isMapSizeEqualToSizeOfFrontCodeBlock())
+                writeAndReset();
+            currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
         }
         writeRemainderAndClose();
         return mergedIndexDirectory;
+    }
+
+    private boolean isMapSizeEqualToSizeOfFrontCodeBlock(){
+        return wordToInvertedIndexMergerMap.size() % numOfTokensInFrontCodeBlock == 0;
+    }
+
+    private void writeAndReset(){
+        writeMapToFiles();
+        resetIteration();
+    }
+
+    private void insertToMap(Map.Entry<String, InvertedIndex> currentWordAndInverted) {
+        String currentWord = currentWordAndInverted.getKey();
+        InvertedIndex currentInverted = currentWordAndInverted.getValue();
+        if(wordToInvertedIndexMergerMap.containsKey(currentWord)){
+            wordToInvertedIndexMergerMap.get(currentWord).put(currentInverted);
+        } else {
+            InvertedIndexesToMerge invertedIndexesToMerge = new InvertedIndexesToMerge();
+            invertedIndexesToMerge.put(currentInverted);
+            wordToInvertedIndexMergerMap.put(currentWord, invertedIndexesToMerge);
+        }
     }
 
 

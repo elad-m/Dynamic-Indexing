@@ -2,7 +2,7 @@ package dynamic_index.index_writing;
 
 import dynamic_index.Statics;
 import dynamic_index.index_structure.FrontCodeBlock;
-import dynamic_index.index_structure.InvertedIndexOfWord;
+import dynamic_index.index_structure.InvertedIndex;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -29,7 +29,7 @@ public class WordsIndexWriter {
     private boolean isInLastWriteIteration = false;
     private int numOfTokensInFrontCodeBlock = 8;
 
-    private final Map<String, InvertedIndexOfWord> wordToInvertedIndex = new TreeMap<>();
+    private final Map<String, InvertedIndex> wordToInvertedIndex = new TreeMap<>();
 
     public WordsIndexWriter(File directoryPath) {
         this.indexDirectory = directoryPath;
@@ -59,8 +59,8 @@ public class WordsIndexWriter {
                                        Map<Integer, String> termIdToTerm,
                                        int reviewCounter) {
         this.numOfTokensInFrontCodeBlock = numOfTokensInFrontCodeBlock;
-        InvertedIndexOfWord.MAX_NUM_OF_PAIRS *= Math.max(1, reviewCounter / 1000);
-        System.out.println("MAX_NUM_OF_PAIRS Words: " + InvertedIndexOfWord.MAX_NUM_OF_PAIRS);
+        InvertedIndex.MAX_NUM_OF_PAIRS *= Math.max(1, reviewCounter / 1000);
+        System.out.println("MAX_NUM_OF_PAIRS Words: " + InvertedIndex.MAX_NUM_OF_PAIRS);
 
         int readingBlockSizeInBytes = readBlockSizeInPairs * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
         instantiateIndexFiles(readingBlockSizeInBytes);
@@ -107,13 +107,13 @@ public class WordsIndexWriter {
             int tid = blockByteBuffer.getInt();
             int rid = blockByteBuffer.getInt();
             if (tid != previousTid) {
-                insertHistogramToTermToInverted(previousTid, ridsOfATid, termIdToTerm);
+                insertHistogramToMap(previousTid, ridsOfATid, termIdToTerm);
             }
             ridsOfATid.add(rid);
             previousTid = tid;
         }
         if (!ridsOfATid.isEmpty()) {
-            insertHistogramToTermToInverted(previousTid, ridsOfATid, termIdToTerm);
+            insertHistogramToMap(previousTid, ridsOfATid, termIdToTerm);
         }
 
     }
@@ -139,13 +139,13 @@ public class WordsIndexWriter {
         return histogram;
     }
 
-    void insertHistogramToTermToInverted(int tid, List<Integer> ridsOfATid, Map<Integer, String> termIdToTerm) {
+    void insertHistogramToMap(int tid, List<Integer> ridsOfATid, Map<Integer, String> termIdToTerm) {
         Map<Integer, Integer> ridToFrequencyHistogram = getRidToFrequencyHistogram(ridsOfATid);
         String word = termIdToTerm.get(tid);
         if (wordToInvertedIndex.containsKey(word)) { // word already in.. can this happen? how to prevent it
             wordToInvertedIndex.get(word).putAll(ridToFrequencyHistogram);
         } else { // new word
-            InvertedIndexOfWord invertedIndexOfWord = new InvertedIndexOfWord(ridToFrequencyHistogram, word, indexDirectory);
+            InvertedIndex invertedIndexOfWord = new InvertedIndex(ridToFrequencyHistogram, word, indexDirectory);
             wordToInvertedIndex.put(word, invertedIndexOfWord);
         }
         ridsOfATid.clear();
@@ -170,12 +170,13 @@ public class WordsIndexWriter {
 
     void writeBlockOfInvertedIndexToFile(int stopWritingWordsAt) {
         int i = 0; // i here is for stopping
-        for (InvertedIndexOfWord invertedIndexOfWord : wordToInvertedIndex.values()) {
+        for (InvertedIndex invertedIndexOfWord : wordToInvertedIndex.values()) {
             if (!isInLastWriteIteration && i == stopWritingWordsAt) {
                 break;
             }
             // handles the writing with dump files if they exist
-            invertedIndexOfWord.writeTo(invertedOutputStream);
+            invertedIndexOfWord.writeCompressedRidsTo(invertedOutputStream, 0); // ignoring last rid here
+            invertedIndexOfWord.writeCompressedFrequenciesTo(invertedOutputStream);
             i++;
         }
     }
@@ -193,9 +194,9 @@ public class WordsIndexWriter {
 
 
     void writeFrontCodeFile(int stopWritingWordsAt) throws IOException {
-        TreeMap<String, InvertedIndexOfWord> blockOfWordsToInvertedIndex = new TreeMap<>();
+        TreeMap<String, InvertedIndex> blockOfWordsToInvertedIndex = new TreeMap<>();
         int i = 0;
-        for (Map.Entry<String, InvertedIndexOfWord> wordAndInvertedIndex : wordToInvertedIndex.entrySet()) {
+        for (Map.Entry<String, InvertedIndex> wordAndInvertedIndex : wordToInvertedIndex.entrySet()) {
             if (!isInLastWriteIteration && i == stopWritingWordsAt) {
                 break;
             }
@@ -214,9 +215,9 @@ public class WordsIndexWriter {
 
     void resetIteration(int stopWritingWordsAt) {
         /* deleting from map all words that have been written */
-        Map<String, InvertedIndexOfWord> iterationRemainder = new TreeMap<>();
+        Map<String, InvertedIndex> iterationRemainder = new TreeMap<>();
         int i = 0;
-        for (Map.Entry<String, InvertedIndexOfWord> wordAndInvertedIndex : wordToInvertedIndex.entrySet()) {
+        for (Map.Entry<String, InvertedIndex> wordAndInvertedIndex : wordToInvertedIndex.entrySet()) {
             if (i >= stopWritingWordsAt) {
                 iterationRemainder.put(wordAndInvertedIndex.getKey(), wordAndInvertedIndex.getValue());
             }
@@ -236,7 +237,7 @@ public class WordsIndexWriter {
     }
 
 
-    void writeFrontCodeBlock(TreeMap<String, InvertedIndexOfWord> blockOfPidsToInvertedIndex, int numOfTokensInFrontCodeBlock)
+    void writeFrontCodeBlock(TreeMap<String, InvertedIndex> blockOfPidsToInvertedIndex, int numOfTokensInFrontCodeBlock)
             throws IOException {
         FrontCodeBlock frontCodeBlock = new FrontCodeBlock(blockOfPidsToInvertedIndex,
                 numOfBytesWrittenInInvertedIndexFile,
