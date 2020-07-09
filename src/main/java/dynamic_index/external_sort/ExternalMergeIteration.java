@@ -231,11 +231,7 @@ public class ExternalMergeIteration {
         private void createMergeFileDirectory(String indexDirectoryName) {
             final String TEMP_FILE_STORE = indexDirectoryName + File.separator +
                     Statics.MERGE_FILES_DIRECTORY_NAME + iterationNumber;
-            File mergeFilesDirectory = new File(TEMP_FILE_STORE);
-            if (!mergeFilesDirectory.mkdir()) {
-                System.out.println("Directory " + TEMP_FILE_STORE + " already exists.");
-            }
-            this.mergeFilesDirectory = mergeFilesDirectory;
+            this.mergeFilesDirectory = Statics.createDirectory(TEMP_FILE_STORE);
         }
 
         File getMergeFilesDirectory(){

@@ -6,6 +6,7 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.TreeMap;
 
 
 public class IndexRemover {
@@ -17,6 +18,12 @@ public class IndexRemover {
         useExceptions = true;
         File file = new File(dir);
         deleteFileOrDirectory(file);
+    }
+
+    void removeFiles(TreeMap<Integer, File> sizeToFile){
+        for(File file : sizeToFile.values()){
+            deleteDirectory(file);
+        }
     }
 
     public void removeAllIndexFiles(String dir) {

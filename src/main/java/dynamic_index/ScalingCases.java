@@ -60,20 +60,18 @@ public class ScalingCases {
     private String[] delQueries = delWordse1;
     private int[] delReviews = delReviews1;
 
-    final private int testType;
-    final private String inputFilename;
-    private final File insertDirectory;
-    final private File[] insertFiles;
+    private final  int testType;
+    private final String inputFilename;
+    private File insertDirectory;
+    private File[] insertFiles;
 
-    public ScalingCases(int eType, String insertionDirectory) {
-        this.insertDirectory = new File(insertionDirectory);
+    public ScalingCases(int eType){
         this.testType = eType;
         switch (eType) {
             case 1:
                 wordQueries = e1;
                 negWordQueries = ne1;
                 inputFilename = MOVIE_REVIEWS_1;
-                insertFiles = getInsertFileNames();
                 insertQueries = inse1;
                 delQueries = delWordse1;
                 delReviews = delReviews1;
@@ -82,7 +80,6 @@ public class ScalingCases {
                 wordQueries = we4;
                 negWordQueries = nwe4;
                 inputFilename = MOVIE_REVIEWS_4;
-                insertFiles = getInsertFileNames();
                 insertQueries = inse1;
                 delQueries = delWordse1;
                 delReviews = delReviews1;
@@ -93,6 +90,11 @@ public class ScalingCases {
                 System.err.println("check test input again");
                 break;
         }
+    }
+    public ScalingCases(int eType, String insertionDirectory) {
+        this(eType);
+        this.insertDirectory = new File(insertionDirectory);
+        this.insertFiles = getInsertFileNames();
     }
 
     private File[] getInsertFileNames() {

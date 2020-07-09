@@ -89,7 +89,7 @@ public class SingleIndexReader {
         if (tokenMetaData == null) {
             map = new TreeMap<>();
         } else {
-            map = getMapFromRawInvertedIndex(tokenMetaData);
+            map = getMapFromTokenMetaData(tokenMetaData);
         }
         return map;
     }
@@ -185,9 +185,18 @@ public class SingleIndexReader {
         }
     }
 
-    TreeMap<Integer, Integer> getMapFromRawInvertedIndex(TokenMetaData pointerAndLength)
+    private TreeMap<Integer, Integer> getMapFromTokenMetaData(TokenMetaData pointerAndLength)
             throws IOException {
-        byte[] rowToReadInto = getBytesOfInvertedIndexRAF(pointerAndLength); // todo: get bytes by buffer!
+        byte[] rowToReadInto = getBytesOfInvertedIndexRAF(pointerAndLength);
+        List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
+        TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
+        if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion
+            filterResults(results);
+        }
+        return results;
+    }
+
+    TreeMap<Integer, Integer> getMapFromRawInvertedIndex(byte[] rowToReadInto) {
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
         if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion

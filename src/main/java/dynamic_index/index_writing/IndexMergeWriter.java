@@ -17,7 +17,6 @@ import java.util.TreeMap;
  */
 public class IndexMergeWriter {
 
-    private final IndexMergingModerator indexMergingModerator;
     private final File mergedIndexDirectory;
     private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
     private int numOfCharactersWrittenInSuffixFile = 0;
@@ -30,15 +29,27 @@ public class IndexMergeWriter {
 
     private final TreeMap<String, InvertedIndexesToMerge> wordToInvertedIndexMergerMap = new TreeMap<>();
 
+    /**
+     * Should be called when wanting to merge all indexes in a givern directory.
+     * @param allIndexesDirectory - the directory in which to merge all indexes.
+     */
+    public IndexMergeWriter(String allIndexesDirectory) {
+        this.mergedIndexDirectory = Statics.createDirectory(allIndexesDirectory
+                + File.separator
+                + Statics.MERGED_INDEX_DIRECTORY);
+    }
 
-    public IndexMergeWriter(IndexMergingModerator indexMergingModerator, String mainIndexDirectory) {
-        this.indexMergingModerator = indexMergingModerator;
-
-        File indexDirectory = new File(mainIndexDirectory + File.separator + Statics.MERGED_INDEX_DIRECTORY);
-        if (!indexDirectory.mkdir()) {
-            System.out.format("Directory %s already exists.", mainIndexDirectory);
+    public File merge(IndexMergingModerator indexMergingModerator) {
+        instantiateIndexFiles();
+        Map.Entry<String, InvertedIndex> currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
+        while (currentWordAndInverted != null) {
+            insertToMap(currentWordAndInverted);
+            if (isMapSizeEqualToSizeOfFrontCodeBlock())
+                writeAndReset();
+            currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
         }
-        this.mergedIndexDirectory = indexDirectory;
+        writeRemainderAndClose();
+        return mergedIndexDirectory;
     }
 
     private void instantiateIndexFiles() {
@@ -94,23 +105,9 @@ public class IndexMergeWriter {
         bufferedStringConcatWriter.write(allWordsSuffixConcatInBlock.toString());
     }
 
-    void resetIteration() {
+    private void resetIteration() {
         wordToInvertedIndexMergerMap.clear();
         allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
-    }
-
-
-    public File merge() {
-        instantiateIndexFiles();
-        Map.Entry<String, InvertedIndex> currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
-        while (currentWordAndInverted != null) {
-            insertToMap(currentWordAndInverted);
-            if (isMapSizeEqualToSizeOfFrontCodeBlock())
-                writeAndReset();
-            currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
-        }
-        writeRemainderAndClose();
-        return mergedIndexDirectory;
     }
 
     private boolean isMapSizeEqualToSizeOfFrontCodeBlock(){
@@ -137,10 +134,10 @@ public class IndexMergeWriter {
 
     private void writeRemainderAndClose() {
         writeMapToFiles(); // last iteration, not necessary to resetIteration here
-        closeAllFiles();
+        closeStreams();
     }
 
-    void closeAllFiles() {
+    void closeStreams() {
         try {
             frontCodeOutputStream.close();
             invertedOutputStream.close();

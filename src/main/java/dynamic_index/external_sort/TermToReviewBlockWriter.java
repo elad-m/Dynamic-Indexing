@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static dynamic_index.Statics.createDirectory;
 import static dynamic_index.Statics.estimateBestSizeOfWordsBlocks;
 
 public class TermToReviewBlockWriter {
@@ -43,11 +44,7 @@ public class TermToReviewBlockWriter {
     private void createMergeFilesDirectory(String indexDirectory) {
         final String TEMP_FILE_STORE = indexDirectory + File.separator
                 + TERM_TYPE + Statics.MERGE_FILES_DIRECTORY_NAME + "0";
-        File tempFilesDirectory = new File(TEMP_FILE_STORE);
-        if (!tempFilesDirectory.mkdir()) {
-            System.out.println("Directory " + TEMP_FILE_STORE + " already exists.");
-        }
-        this.mergeFilesDirectory = tempFilesDirectory;
+        this.mergeFilesDirectory = createDirectory(TEMP_FILE_STORE);
     }
 
     private void createNewFile() {

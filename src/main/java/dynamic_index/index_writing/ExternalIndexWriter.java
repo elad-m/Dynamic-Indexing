@@ -14,9 +14,10 @@ import java.util.TreeMap;
 
 /**
  * Holds the token to review and frequency mapping, and write it to a designated index
- * files
+ * files. The source of data for this index is a huge file of pairs of (tid,rid) sorted by tid and
+ * then by rid.
  */
-public class WordsIndexWriter {
+public class ExternalIndexWriter {
 
     private final File indexDirectory;
     private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
@@ -31,7 +32,7 @@ public class WordsIndexWriter {
 
     private final Map<String, InvertedIndex> wordToInvertedIndex = new TreeMap<>();
 
-    public WordsIndexWriter(File directoryPath) {
+    public ExternalIndexWriter(File directoryPath) {
         this.indexDirectory = directoryPath;
     }
 
@@ -53,11 +54,10 @@ public class WordsIndexWriter {
         }
     }
 
-
-    public void loadSortedFileByBlocks(int numOfTokensInFrontCodeBlock,
-                                       int readBlockSizeInPairs,
-                                       Map<Integer, String> termIdToTerm,
-                                       int reviewCounter) {
+    public void writeFromSortedFileByBlocks(int numOfTokensInFrontCodeBlock,
+                                            int readBlockSizeInPairs,
+                                            Map<Integer, String> termIdToTerm,
+                                            int reviewCounter) {
         this.numOfTokensInFrontCodeBlock = numOfTokensInFrontCodeBlock;
         InvertedIndex.MAX_NUM_OF_PAIRS *= Math.max(1, reviewCounter / 1000);
         System.out.println("MAX_NUM_OF_PAIRS Words: " + InvertedIndex.MAX_NUM_OF_PAIRS);
@@ -69,13 +69,13 @@ public class WordsIndexWriter {
 
         System.out.println("reading block size in WORDS writer in bytes: " + readingBlockSizeInBytes);
         System.out.println("NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK: " + numOfTokensInFrontCodeBlock);
-        loadSortedFileByBlocks(sortedFile, readingBlockSizeInBytes, termIdToTerm);
+        writeFromSortedFileByBlocks(sortedFile, readingBlockSizeInBytes, termIdToTerm);
     }
 
 
-    private void loadSortedFileByBlocks(File sortedFile,
-                                        int readingBlockSizeInBytes,
-                                        Map<Integer, String> termIdToTerm) {
+    private void writeFromSortedFileByBlocks(File sortedFile,
+                                             int readingBlockSizeInBytes,
+                                             Map<Integer, String> termIdToTerm) {
         try (BufferedInputStream sortedFileBIS = new BufferedInputStream(new FileInputStream(sortedFile))) {
             byte[] blockAsBytes = new byte[readingBlockSizeInBytes];
             int amountOfBytesRead = sortedFileBIS.read(blockAsBytes);
@@ -145,7 +145,7 @@ public class WordsIndexWriter {
         if (wordToInvertedIndex.containsKey(word)) { // word already in.. can this happen? how to prevent it
             wordToInvertedIndex.get(word).putAll(ridToFrequencyHistogram);
         } else { // new word
-            InvertedIndex invertedIndexOfWord = new InvertedIndex(ridToFrequencyHistogram, word, indexDirectory);
+            InvertedIndex invertedIndexOfWord = new InvertedIndex(word, ridToFrequencyHistogram, indexDirectory);
             wordToInvertedIndex.put(word, invertedIndexOfWord);
         }
         ridsOfATid.clear();
@@ -237,9 +237,9 @@ public class WordsIndexWriter {
     }
 
 
-    void writeFrontCodeBlock(TreeMap<String, InvertedIndex> blockOfPidsToInvertedIndex, int numOfTokensInFrontCodeBlock)
+    void writeFrontCodeBlock(TreeMap<String, InvertedIndex> blockOfWordToInvertedIndex, int numOfTokensInFrontCodeBlock)
             throws IOException {
-        FrontCodeBlock frontCodeBlock = new FrontCodeBlock(blockOfPidsToInvertedIndex,
+        FrontCodeBlock frontCodeBlock = new FrontCodeBlock(blockOfWordToInvertedIndex,
                 numOfBytesWrittenInInvertedIndexFile,
                 numOfTokensInFrontCodeBlock);
         numOfBytesWrittenInInvertedIndexFile = frontCodeBlock.getBytesOfInvertedIndexWrittenSoFar();

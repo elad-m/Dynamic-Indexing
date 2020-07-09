@@ -2,13 +2,11 @@ package dynamic_index;
 
 import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_reading.SingleIndexReader;
+import dynamic_index.index_structure.InvertedIndex;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.Vector;
+import java.util.*;
 
 
 /**
@@ -28,29 +26,73 @@ public class IndexReader {
     private File invalidationVector;
 
     // auxiliary index data
-    private int numOfAuxIndexes = 0;
-    private File[] auxInvertedIndexFiles;
-    private byte[][] auxIndexesDictionary;
-    private byte[][] auxIndexesConcatString;
-    private int[] auxNumOfWordsInFrontCodeBlock;
+    private int numOfSubIndexes = 0;
+    private File[] subInvertedIndexFiles;
+    private byte[][] subIndexesDictionary;
+    private byte[][] subIndexesConcatString;
+    private int[] subNumOfWordsInFrontCodeBlock;
 
     /**
      * Creates an IndexReader which will read from the given directory, including all auxiliary indexes
      * it might have.
+     * @param dir - directory where the indexes should be
      */
     public IndexReader(String dir) {
         this.mainIndexDirectory = new File(dir);
-        loadIndexes();
+        loadAllIndexesWithMain();
     }
 
-    private void loadIndexes() {
+    /**
+     * For getting a log-merger.
+     * @param dir - directory in which all indexes are.
+     * @param allIndexFiles - all index files in mainIndexDirectory
+     * @param numberOfIndexDirectories - read to memory only this number of indexes
+     */
+    IndexReader(String dir, Collection<File> allIndexFiles, int numberOfIndexDirectories) {
+        this.mainIndexDirectory = new File(dir);
+        this.numOfSubIndexes = numberOfIndexDirectories;
+        loadNFirstIndexes(allIndexFiles);
+    }
+
+    /**
+     * For querying the index from outside the package.
+     * @param dir - directory in which all the index directories are
+     * @param dummyForLogMerge - a way to invoke the constructor that does not use/look for
+     *                         a main index, i.e. files in the main directory.
+     */
+    public IndexReader(String dir, boolean dummyForLogMerge){
+        this.mainIndexDirectory = new File(dir);
+        List<File> allFiles = Arrays.asList(Objects.requireNonNull(mainIndexDirectory.listFiles()));
+        this.numOfSubIndexes = allFiles.size();
+        loadNFirstIndexes(allFiles);
+    }
+
+    private void loadNFirstIndexes(Collection<File> allIndexFiles) {
+        try {
+            assert numOfSubIndexes <= allIndexFiles.size();
+            instantiateSubIndexArrays();
+            int i = 0;
+            for(File indexDir: allIndexFiles){
+                if(i == numOfSubIndexes){
+                    break;
+                }
+                loadSingleSubIndex(indexDir, i);
+                i++;
+            }
+            instantiateInvalidationVector();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadAllIndexesWithMain() {
         try {
             loadMainIndex();
-            File[] auxIndexDirectories = getAuxIndexDirectories();
-            numOfAuxIndexes = auxIndexDirectories.length;
-            instantiateAuxIndexArrays();
-            for (int i = 0; i < numOfAuxIndexes; i++) {
-                loadSingleAuxIndex(auxIndexDirectories[i], i);
+            File[] subIndexDirectories = getAuxIndexDirectories();
+            numOfSubIndexes = subIndexDirectories.length;
+            instantiateSubIndexArrays();
+            for (int i = 0; i < numOfSubIndexes; i++) {
+                loadSingleSubIndex(subIndexDirectories[i], i);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -61,37 +103,31 @@ public class IndexReader {
         return mainIndexDirectory.getAbsoluteFile().listFiles(File::isDirectory);
     }
 
-    private void instantiateAuxIndexArrays() {
-        auxIndexesDictionary = new byte[numOfAuxIndexes][];
-        auxIndexesConcatString = new byte[numOfAuxIndexes][];
-        auxNumOfWordsInFrontCodeBlock = new int[numOfAuxIndexes];
-        auxInvertedIndexFiles = new File[numOfAuxIndexes];
+    private void instantiateSubIndexArrays() {
+        subIndexesDictionary = new byte[numOfSubIndexes][];
+        subIndexesConcatString = new byte[numOfSubIndexes][];
+        subNumOfWordsInFrontCodeBlock = new int[numOfSubIndexes];
+        subInvertedIndexFiles = new File[numOfSubIndexes];
     }
 
-    private void loadSingleAuxIndex(File auxIndexDirectory, int index_i) throws IOException {
+    private void loadSingleSubIndex(File auxIndexDirectory, int index_i) throws IOException {
         File auxDictionaryFile = new File(auxIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_FRONT_CODED_FILENAME);
-        File auxStringConcat = new File(auxIndexDirectory.getPath()
+        File auxStringConcatFile = new File(auxIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_CONCAT_FILENAME);
-        assert auxDictionaryFile.exists() && auxStringConcat.exists();
-        auxIndexesDictionary[index_i] = Files.readAllBytes(auxDictionaryFile.toPath());
-        auxIndexesConcatString[index_i] = Files.readAllBytes(auxStringConcat.toPath());
-        auxInvertedIndexFiles[index_i] = new File(auxIndexDirectory.getPath()
+        File auxInvertedIndexFile = new File(auxIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
+
+        assert auxDictionaryFile.exists() && auxStringConcatFile.exists() && auxInvertedIndexFile.exists();
+
+        subIndexesDictionary[index_i] = Files.readAllBytes(auxDictionaryFile.toPath());
+        subIndexesConcatString[index_i] = Files.readAllBytes(auxStringConcatFile.toPath());
+        subInvertedIndexFiles[index_i] = auxInvertedIndexFile;
         loadAuxNumOfTokensPerBlock(auxIndexDirectory, index_i);
     }
 
     private void loadAuxNumOfTokensPerBlock(File indexDirectory, int index_i) {
-        auxNumOfWordsInFrontCodeBlock[index_i] = Statics.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
-//        File indexMetaFile = new File(indexDirectory.getPath() + File.separator + Statics.MAIN_INDEX_META_DATA_FILENAME);
-//        RandomAccessFile raIndexMeta;
-//        raIndexMeta = new RandomAccessFile(indexMetaFile, "r");
-//        raIndexMeta.seek(Statics.INTEGER_SIZE * 2);
-//        auxNumOfWordsInFrontCodeBlock[index_i] = raIndexMeta.readInt();
-//        System.out.format("Front block size for index%d: %d" + System.lineSeparator(),
-//                index_i,
-//                auxNumOfWordsInFrontCodeBlock[index_i]);
-//        raIndexMeta.close();
+        subNumOfWordsInFrontCodeBlock[index_i] = Statics.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
     }
 
     private void loadMainIndex() throws IOException {
@@ -101,8 +137,7 @@ public class IndexReader {
                 + File.separator + Statics.WORDS_CONCAT_FILENAME);
         mainInvertedIndexFile = new File(mainIndexDirectory.getPath()
                 + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
-        invalidationVector = new File(mainIndexDirectory.getPath()
-                + File.separator + Statics.INVALIDATION_VECTOR_FILENAME);
+        instantiateInvalidationVector();
 
         assert mainDictionaryFile.exists() && mainStringConcatFile.exists()
                 && mainInvertedIndexFile.exists() && invalidationVector.exists();
@@ -112,16 +147,13 @@ public class IndexReader {
         loadMainNumOfTokensPerBlock();
     }
 
+    private void instantiateInvalidationVector(){
+        invalidationVector = new File(mainIndexDirectory.getPath()
+                + File.separator + Statics.INVALIDATION_VECTOR_FILENAME);
+    }
+
     private void loadMainNumOfTokensPerBlock() {
         mainNumOfWordsInFrontCodeBlock = Statics.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
-//        File indexMetaFile = new File(mainIndexDirectory.getPath() + File.separator + Statics.MAIN_INDEX_META_DATA_FILENAME);
-//        RandomAccessFile raIndexMeta;
-//        raIndexMeta = new RandomAccessFile(indexMetaFile, "r");
-//        raIndexMeta.seek(Statics.INTEGER_SIZE * 2);
-//        mainNumOfWordsInFrontCodeBlock = raIndexMeta.readInt();
-//        System.out.format("Front block size main: %d" + System.lineSeparator(),
-//                mainNumOfWordsInFrontCodeBlock);
-//        raIndexMeta.close();
     }
 
 
@@ -140,14 +172,30 @@ public class IndexReader {
         return mapToEnumeration(unionOfResults);
     }
 
+    /**
+     * The same as {@link #getReviewsWithToken(String)} ()} but here we use also an in-memory index.
+     * This method should be called when using logMerge indexing.
+     * @param token - token to find its postings list.
+     * @param continuousIndexWriter - i.e. index writer using LogMerging
+     * @return the same as above.
+     */
+    public Enumeration<Integer> getReviewsWithToken(String token,
+                                                    ContinuousIndexWriter continuousIndexWriter){
+        TreeMap<Integer, Integer> unionOfResults = new TreeMap<>();
+        addAuxIndexesResults(unionOfResults, token);
+        unionOfResults.putAll(continuousIndexWriter.getReviewsWithToken(token));
+        return mapToEnumeration(unionOfResults);
+    }
+
+
     private void addAuxIndexesResults(TreeMap<Integer, Integer> unionOfResults, String token) {
         SingleIndexReader singleIndexReader;
-        for (int i = 0; i < numOfAuxIndexes; i++) {
-            singleIndexReader = new SingleIndexReader(auxIndexesDictionary[i],
-                    auxIndexesConcatString[i],
-                    auxInvertedIndexFiles[i],
+        for (int i = 0; i < numOfSubIndexes; i++) {
+            singleIndexReader = new SingleIndexReader(subIndexesDictionary[i],
+                    subIndexesConcatString[i],
+                    subInvertedIndexFiles[i],
                     invalidationVector,
-                    auxNumOfWordsInFrontCodeBlock[i], mainIndexDirectory);
+                    subNumOfWordsInFrontCodeBlock[i], mainIndexDirectory);
             TreeMap<Integer, Integer> auxResults = singleIndexReader.getReviewsWithWord(token);
             unionOfResults.putAll(auxResults);
         }
@@ -173,7 +221,11 @@ public class IndexReader {
         return toEnumerate.elements();
     }
 
-    public IndexMergingModerator getIndexMergingModerator() {
+    /**
+     * Creates and returns IndexMergingModerator for the regular merge: merging all indexes and having main index.
+     * @return - IndexMergingModerator with all indexes - main and all auxiliaries - added to it.
+     */
+    public IndexMergingModerator getIndexMergingModeratorRegularMerge() {
         IndexMergingModerator indexMergingModerator = new IndexMergingModerator();
 
         // adding main index
@@ -182,15 +234,32 @@ public class IndexReader {
         indexMergingModerator.add(singleIndexReader);
 
         // adding auxiliary indexes
-        for (int i = 0; i < numOfAuxIndexes; i++) {
-            singleIndexReader = new SingleIndexReader(auxIndexesDictionary[i],
-                    auxIndexesConcatString[i],
-                    auxInvertedIndexFiles[i],
+        indexMergingModerator.addAll(getAllSingleIndexReaders());
+        return indexMergingModerator;
+    }
+
+    private List<SingleIndexReader> getAllSingleIndexReaders(){
+        List<SingleIndexReader> singleIndexReaders = new ArrayList<>();
+        for (int i = 0; i < numOfSubIndexes; i++) {
+            SingleIndexReader singleIndexReader = new SingleIndexReader(subIndexesDictionary[i],
+                    subIndexesConcatString[i],
+                    subInvertedIndexFiles[i],
                     invalidationVector,
-                    auxNumOfWordsInFrontCodeBlock[i],
+                    subNumOfWordsInFrontCodeBlock[i],
                     mainIndexDirectory);
-            indexMergingModerator.add(singleIndexReader);
+            singleIndexReaders.add(singleIndexReader);
         }
+        return singleIndexReaders;
+    }
+
+    /**
+     * Creates and returns IndexMergingModerator for the log-merge: merging all numOfSubIndexes directories.
+     * Should be only used when initializes with the log-merge constructor, i.e. no main index.
+     * @return IndexMergingModerator with all indexes according to constructor index initialization.
+     */
+    public IndexMergingModerator getIndexMergingModeratorLogMerge(){
+        IndexMergingModerator indexMergingModerator = new IndexMergingModerator();
+        indexMergingModerator.addAll(getAllSingleIndexReaders());
         return indexMergingModerator;
     }
 

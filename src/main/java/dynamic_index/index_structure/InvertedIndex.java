@@ -11,19 +11,20 @@ import java.util.TreeMap;
 
 
 /**
- * The rids and frequencies of a unique word . Handles the byte conversion mainly.
- * Now supported bulk loading and updating the frequency of a word.
+ * The rids and frequencies of a unique word. Executes writing with compression to
+ * external stream.
  */
 public class InvertedIndex implements WritingMeasurable {
 
-    protected static final int[] LENGTH_PRECODED_MAXIMA =
+    private static final int[] LENGTH_PRECODED_MAXIMA =
             {63, 16383, 4194303, 1073741823};// 2^6-1, 2^14-1, 2^22-1, 2^30-1
-    protected static final int[] BITWISE_OR_OPERAND_TO_ENCODE_LENGTH_PRECODED_VARINT =
+    private static final int[] BITWISE_OR_OPERAND_TO_ENCODE_LENGTH_PRECODED_VARINT =
             {0, 16384, 8388608, -1073741824}; // 00|zeros, 2^14, 2^23, 2^31+2^30
 
     public static int MAX_NUM_OF_PAIRS = 500;
 
     private final String word;
+
 
 
     /**
@@ -33,7 +34,6 @@ public class InvertedIndex implements WritingMeasurable {
     private final TreeMap<Integer, Integer> ridToFrequencyMap = new TreeMap<>();
 
     private int amountOfBytesWrittenExternalOutput = 0;
-    private int ioBufferSize = 8192;
     private int numOfReviews = 0;
 
     private boolean finishedWriting = false;
@@ -44,17 +44,44 @@ public class InvertedIndex implements WritingMeasurable {
     private File freqDumpFile;
     private DataOutputStream dosRawRidDumpFile;
     private DataOutputStream dosRawFreqDumpFile;
-    private boolean hasFile = false;
+    private boolean withFile = false;
     private int firstRidInFile;
 
 
-    public InvertedIndex(Map<Integer, Integer> ridToFrequency, String word, File indexDirectory) {
+    /**
+     * Create inverted index with minimal data: a word that appears in a review with rid.
+     * @param word - a word in the review
+     * @param rid - review ID (docID)
+     * @param indexDirectory - where to keep temporary files if necessary
+     */
+    public InvertedIndex(String word, int rid, File indexDirectory){
+        this.word = word;
+        this.indexDirectory = indexDirectory;
+        put(rid, 1);
+    }
+
+    /**
+     * Create inverted index with some bulk of data of a word.
+     * @param word - the word this inverted index belongs to.
+     * @param ridToFrequency - review IDs and the frequency that the word appears in
+     * @param indexDirectory - where to keep temporary files if necessary
+     */
+    public InvertedIndex(String word, Map<Integer, Integer> ridToFrequency, File indexDirectory) {
         this.word = word;
         this.indexDirectory = indexDirectory;
         putAll(ridToFrequency);
     }
 
-    void put(int rid, int frequency) {
+    /**
+     * @return the size of the inverted index calculated by reviews (and not sum of frequencies).
+     */
+    public int getSizeByReviews(){
+        if(!withFile)
+            return ridToFrequencyMap.size();
+        else return -1; // should not have a file
+    }
+
+    private void put(int rid, int frequency) {
         if (ridToFrequencyMap.size() == MAX_NUM_OF_PAIRS) {
             writeMapToDumpFiles(); // counting on sorted here
             emptyInvertedIndexAfterWriting(); // the whole point of writing to file is free memory resources
@@ -67,17 +94,25 @@ public class InvertedIndex implements WritingMeasurable {
         }
     }
 
+    /**
+     * Insertes all the rids and their frequencies to the class's map
+     * @param ridToFrequency - rids and the frequency of this word in it.
+     */
     public void putAll(Map<Integer, Integer> ridToFrequency) {
         for (Map.Entry<Integer, Integer> anRidToFrequency : ridToFrequency.entrySet()) {
             put(anRidToFrequency.getKey(), anRidToFrequency.getValue());
         }
     }
 
+    public void put(int rid){
+        put(rid, 1);
+    }
+
     private void writeMapToDumpFiles() {
         try {
-            if (!hasFile) {
+            if (!withFile) {
                 createFileAndStream();
-                hasFile = true;
+                withFile = true;
                 firstRidInFile = ridToFrequencyMap.firstKey(); // happens only once
             }
             for(Map.Entry<Integer, Integer> ridAndFrequency: ridToFrequencyMap.entrySet()){ // written as is
@@ -98,7 +133,7 @@ public class InvertedIndex implements WritingMeasurable {
                 + Statics.BINARY_FILE_SUFFIX);
         freqDumpFile = new File(indexDirectory.getPath() + File.separator + word + "FreqTmp"
                 + Statics.BINARY_FILE_SUFFIX);
-        ioBufferSize = Statics.roundUpToProductOfPairSize(ridToFrequencyMap.size() * Statics.INTEGER_SIZE);
+        int ioBufferSize = Statics.roundUpToProductOfPairSize(ridToFrequencyMap.size() * Statics.INTEGER_SIZE);
         dosRawRidDumpFile = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(ridDumpFile), ioBufferSize));
         dosRawFreqDumpFile = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(freqDumpFile), ioBufferSize));
         System.out.println("\tcreated file with path: " + ridDumpFile.getPath()  + " and " + freqDumpFile.getPath());
@@ -116,7 +151,7 @@ public class InvertedIndex implements WritingMeasurable {
     public int writeCompressedRidsTo(BufferedOutputStream bosOfAllInverted, int prevInvertedIndexRid) {
         int lastRid = prevInvertedIndexRid;
         try {
-            if (hasFile) {
+            if (withFile) {
                 lastRid = writeCompressedRidsFromDumpFile(bosOfAllInverted);
             }
             lastRid = writeCompressedRidsFromInMemory(bosOfAllInverted, lastRid);
@@ -170,7 +205,7 @@ public class InvertedIndex implements WritingMeasurable {
      */
     public void writeCompressedFrequenciesTo(BufferedOutputStream bosOfAllInverted) {
         try {
-            if (hasFile) {
+            if (withFile) {
                 writeCompressedFrequenciesFromDumpFile(bosOfAllInverted);
                 deleteDumpFiles();
             }
@@ -289,12 +324,26 @@ public class InvertedIndex implements WritingMeasurable {
 
     int getFirstRid(){
         int firstRid;
-        if(hasFile){
+        if(withFile){
             firstRid = firstRidInFile;
         } else {
             firstRid = ridToFrequencyMap.firstKey();
         }
         return firstRid;
+    }
+
+    /**
+     * @return true if this class is also written to files, or false if all data is in-memory
+     */
+    public boolean isWithFile() {
+        return withFile;
+    }
+
+    /**
+     * @return - in-memory data structure of this class.
+     */
+    public TreeMap<Integer, Integer> getRidToFrequencyMap() {
+        return ridToFrequencyMap;
     }
 
 }

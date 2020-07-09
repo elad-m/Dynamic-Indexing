@@ -4,7 +4,7 @@ import dynamic_index.external_sort.ExternalMergeSort;
 import dynamic_index.external_sort.TermToReviewBlockWriter;
 import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_writing.IndexMergeWriter;
-import dynamic_index.index_writing.WordsIndexWriter;
+import dynamic_index.index_writing.ExternalIndexWriter;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -15,13 +15,10 @@ import static dynamic_index.Statics.*;
 
 public class IndexWriter {
 
-    public static final int WORD_MAX_SIZE = 127;
-    private static final String REVIEW_TEXT_FIELD = "review/text";
-
     private final String mainIndexDirectory;
     private File currentIndexDirectory;
 
-    private WordsIndexWriter wordsDataIndexWriter;
+    private ExternalIndexWriter wordsDataIndexWriter;
     private final Map<String, Integer> wordTermToTermID = new HashMap<>();
     private TermToReviewBlockWriter wordsTermToReviewBlockWriter;
 
@@ -62,18 +59,13 @@ public class IndexWriter {
         constructIndex(inputFile, reviewCounter);
     }
 
-
     private void instantiateWriters() {
-        wordsDataIndexWriter = new WordsIndexWriter(currentIndexDirectory);
+        wordsDataIndexWriter = new ExternalIndexWriter(currentIndexDirectory);
     }
 
 
     private void createIndexFilesDirectory(String dir) {
-        File indexDirectory = new File(dir);
-        if (!indexDirectory.mkdir()) {
-            System.out.format("Directory %s already exists.", dir);
-        }
-        this.currentIndexDirectory = indexDirectory;
+        this.currentIndexDirectory = createDirectory(dir);
     }
 
     /*
@@ -209,26 +201,13 @@ public class IndexWriter {
         }
     }
 
-    /*
-    No empty strings, all alphanumeric, lower cased BUT WITH long words > 127 chars
-     */
-    private List<String> textToNormalizedTokens(String reviewTextLine) {
-        List<String> filteredTokens = new ArrayList<>();
-        String[] tokens = reviewTextLine.split("[^a-zA-Z0-9]+"); // alphanumeric
-        for (String token : tokens) {
-            if (!token.equals("")) // no empty
-                filteredTokens.add(token.toLowerCase());  // lower case but includes > 127
-        }
-        Collections.sort(filteredTokens);
-        return filteredTokens;
-    }
 
 
     private void constructIndexFromSorted(Map<Integer, String> wordsTermIdToTerm, int initialReviewCounter) throws IOException {
         // words
         int readBlockSize = estimateBestSizeOfWordsBlocks(tokenCounter, false);
         int numOfWordsInFrontCodeBlock = calculateNumOfTokensInFrontCodeBlock(tokenCounter);
-        wordsDataIndexWriter.loadSortedFileByBlocks(numOfWordsInFrontCodeBlock, readBlockSize, wordsTermIdToTerm, reviewCounter);
+        wordsDataIndexWriter.writeFromSortedFileByBlocks(numOfWordsInFrontCodeBlock, readBlockSize, wordsTermIdToTerm, reviewCounter);
 
 //        if (!SKIP_SORTING)
 //            writeMetaData();
@@ -292,10 +271,10 @@ public class IndexWriter {
      */
     public void merge(IndexReader indexReader) {
         // reading rows of all indexes
-        IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModerator();
+        IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModeratorRegularMerge();
         // makes each row read from the moderator written as one index.
-        IndexMergeWriter indexMergeWriter = new IndexMergeWriter(indexMergingModerator, mainIndexDirectory);
-        File mergedDirectory = indexMergeWriter.merge();
+        IndexMergeWriter indexMergeWriter = new IndexMergeWriter(mainIndexDirectory);
+        File mergedDirectory = indexMergeWriter.merge(indexMergingModerator);
         setInvalidationVectorIsDirty(false);
         IndexRemover indexRemover = new IndexRemover();
         indexRemover.removeFilesAfterMerge(mainIndexDirectory);

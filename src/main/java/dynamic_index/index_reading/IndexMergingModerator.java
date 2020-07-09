@@ -1,5 +1,6 @@
 package dynamic_index.index_reading;
 
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader;
 import dynamic_index.index_structure.InvertedIndex;
 
 
@@ -15,16 +16,17 @@ public class IndexMergingModerator {
 
     private final List<SingleIndexReaderQueue> singleIndexReaderQueues = new ArrayList<>();
 
-    public IndexMergingModerator(){
-
-    }
-
-
     public void add(SingleIndexReader singleIndexReader){
         try {
             singleIndexReaderQueues.add(new SingleIndexReaderQueue(singleIndexReader));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void addAll(List<SingleIndexReader> singleIndexReaderList){
+        for(SingleIndexReader singleIndexReader: singleIndexReaderList){
+            add(singleIndexReader);
         }
     }
 

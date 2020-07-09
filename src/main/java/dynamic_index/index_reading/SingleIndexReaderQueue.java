@@ -12,15 +12,14 @@ class SingleIndexReaderQueue{
 
     private final File mainIndexDirectory;
 
-    // assumption - no duplication of words in the same index
-//    Queue<WordAndInvertedIndex> wordAndInvertedIndexQueue = new PriorityQueue<>();
-    TreeMap<String, InvertedIndex> wordToInvertedIndexQueue = new TreeMap<>();
-    SingleIndexReader singleIndexReader;
-    int bytesPointer = 0;
-    int rowsPointer = 0;
-    boolean isDoneReadingFile = false;
+    // since the order or insertion is also lexicographic, this tree-map is de facto a queue
+    private final TreeMap<String, InvertedIndex> wordToInvertedIndexQueue = new TreeMap<>();
+
+    private final SingleIndexReader singleIndexReader;
+    private int bytesPointer = 0;
+    private int rowsPointer = 0;
     private boolean isQueueDone; // finished reading from file AND queue has been emptied
-    BufferedInputStream invertedIndexBIS;
+    private final BufferedInputStream invertedIndexBIS;
 
     public SingleIndexReaderQueue(SingleIndexReader singleIndexReader) throws FileNotFoundException {
         this.singleIndexReader = singleIndexReader;
@@ -36,7 +35,7 @@ class SingleIndexReaderQueue{
     public Map.Entry<String, InvertedIndex> poll(){
         Map.Entry<String, InvertedIndex> wordAndInvertedIndex = wordToInvertedIndexQueue.pollFirstEntry();
         if (wordToInvertedIndexQueue.isEmpty()){
-            if(!isDoneReadingFile) {
+            if(!isQueueDone) {
                 load();
             } else {
                 setQueueDone();
@@ -46,7 +45,6 @@ class SingleIndexReaderQueue{
     }
 
     private void load(){
-        // todo: possibly will have performance issues here for the separate readings of inverted index
         try{
             if(bytesPointer < singleIndexReader.getIndexDictionaryLength()){
                 Map<String, TokenMetaData> wordToTokenMetaData = singleIndexReader.getWordsFromRowOfBytes(bytesPointer, rowsPointer);
@@ -54,13 +52,13 @@ class SingleIndexReaderQueue{
                     InvertedIndex invertedIndex = getInvertedIndex(entry);
                     if(invertedIndex != null){ // might get no inverted index because of deletion
                         String word = entry.getKey();
-//                        WordAndInvertedIndex wordAndInvertedIndex = new WordAndInvertedIndex(word, invertedIndex);
                         wordToInvertedIndexQueue.put(word, invertedIndex);
                     }
                 }
                 rowsPointer++;
                 bytesPointer += singleIndexReader.getFRONT_CODE_ROW_SIZE_IN_BYTES();
             }
+            // reading from bytesPointer got nothing into the map, so no more entries in index
             if(wordToInvertedIndexQueue.isEmpty()){
                 setQueueDone();
             }
@@ -70,11 +68,17 @@ class SingleIndexReaderQueue{
     }
 
     private InvertedIndex getInvertedIndex(Map.Entry<String, TokenMetaData> wordToTokenMetaData) throws IOException {
-        TreeMap<Integer, Integer> map = singleIndexReader.getMapFromRawInvertedIndex(wordToTokenMetaData.getValue());
-        if(map.isEmpty()){
+        int pointerLength = wordToTokenMetaData.getValue().getFreqLength();
+        byte[] rowToReadInto = new byte[pointerLength];
+        int numOfReadBytes = invertedIndexBIS.read(rowToReadInto);
+
+        assert numOfReadBytes == pointerLength;
+
+        TreeMap<Integer, Integer> map = singleIndexReader.getMapFromRawInvertedIndex(rowToReadInto);
+        if(map.isEmpty()){ // could be empty, because of deletion. The method above filter deleted rids.
             return null;
         } else {
-            return new InvertedIndex(map, wordToTokenMetaData.getKey(), mainIndexDirectory);
+            return new InvertedIndex(wordToTokenMetaData.getKey(), map, mainIndexDirectory);
         }
     }
 

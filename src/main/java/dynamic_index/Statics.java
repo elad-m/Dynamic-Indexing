@@ -3,10 +3,7 @@ package dynamic_index;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("SpellCheckingInspection")
@@ -15,9 +12,13 @@ public final class Statics {
     public static final int BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK = 8;
     public static final int WORDS_DEFAULT_MAX_TEMP_FILES = 1024;
     public static final int STRING_BUILDER_DEFAULT_CAPACITY = 32;
+    public static final int WORD_MAX_SIZE = 127;
+    public static final int DEFAULT_BUFFER_SIZE = 8192;
 
     public static final int INTEGER_SIZE = Integer.BYTES;
     public static final int PAIR_OF_INT_SIZE_IN_BYTES = Integer.BYTES * 2;
+
+    public static final String REVIEW_TEXT_FIELD = "review/text";
 
     public static final String WORDS_CONCAT_FILENAME = "wordsConcatFile.bin";
     public static final String WORDS_FRONT_CODED_FILENAME = "wordsFrontCodedToPointers.bin";
@@ -37,33 +38,18 @@ public final class Statics {
 
     public static final String MERGED_INDEX_DIRECTORY = "mergedIndex";
     public static final String INDEXES_DIR_NAME = "indexes";
+    public static final String LOG_MERGE_INDEXES_DIR_NAME = "logMergeIndexes";
 
-    public static boolean isInvalidationVectorIsDirty() {
-        return invalidationVectorIsDirty;
-    }
-
-    public static void setInvalidationVectorIsDirty(boolean invalidationVectorIsDirty) {
-        Statics.invalidationVectorIsDirty = invalidationVectorIsDirty;
-    }
 
     private static boolean invalidationVectorIsDirty = false;
 
-
-
-    public static byte[] intToByteArray(int intToConvert) {
-        ByteBuffer b = ByteBuffer.allocate(4);
-        b.putInt(intToConvert);
-        return b.array();
-    }
-
     public static int calculateNumOfTokensInFrontCodeBlock(int numOfTokens) {
-        int tokensPerBlock = BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
-//        if (numOfTokens > 10000 && numOfTokens <= 1000000) { // 10,000 to 1 million
+        //        if (numOfTokens > 10000 && numOfTokens <= 1000000) { // 10,000 to 1 million
 //            tokensPerBlock = (int) Math.pow(tokensPerBlock, 2);
 //        } else if (numOfTokens > 1000000) {
 //            tokensPerBlock = (int) Math.pow(tokensPerBlock, 3);
 //        }
-        return tokensPerBlock;
+        return BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
     }
 
     public static int roundDownToMultiplicationOf(int roundItDown, int multiplicationOf) {
@@ -112,7 +98,7 @@ public final class Statics {
     }
 
     private static long calculateSizeOfBlock(final long sizeOfFile) {
-        long baseSizeOfBlock = (long)Math.ceil((double)sizeOfFile / Statics.WORDS_DEFAULT_MAX_TEMP_FILES);
+        long baseSizeOfBlock = (long) Math.ceil((double) sizeOfFile / Statics.WORDS_DEFAULT_MAX_TEMP_FILES);
         return Statics.roundUpToProductOfPairSize(baseSizeOfBlock);
     }
 
@@ -125,12 +111,6 @@ public final class Statics {
         return (int) blockSize;
     }
 
-    public static void deleteSortedFile(File indexDirectory) throws IOException {
-        File wordsSortedFile = new File(indexDirectory + File.separator
-                + Statics.WORDS_SORTED_FILE_NAME);
-        Files.delete(wordsSortedFile.toPath());
-    }
-
     public static Map<Integer, String> swapHashMapDirections(Map<String, Integer> termToTermID) {
         Map<Integer, String> swapped = termToTermID.entrySet().stream().collect(
                 Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
@@ -138,31 +118,49 @@ public final class Statics {
         return swapped;
     }
 
-//    public static int getTokenCounter(File indexDirectory, boolean loadAll) {
-//        String filename = loadAll? ALL_INDEXES_META_DATA_FILENAME: MAIN_INDEX_META_DATA_FILENAME;
-//        File metaFile = new File(indexDirectory.getPath() + File.separator + filename);
-//        byte[] numOfReviewTokensTokensInBlock = new byte[INTEGER_SIZE * 3];
-//        try {
-//            new RandomAccessFile(metaFile, "r").read(numOfReviewTokensTokensInBlock);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return ByteBuffer.wrap(numOfReviewTokensTokensInBlock, INTEGER_SIZE, INTEGER_SIZE).getInt();
-//    }
-//
-//
-//    public static int getReviewCounter(File indexDirectory, boolean loadAll) {
-//        String filename = loadAll? ALL_INDEXES_META_DATA_FILENAME: MAIN_INDEX_META_DATA_FILENAME;
-//        File metaFile = new File(indexDirectory.getPath() + File.separator + filename);
-//        byte[] reviewCounter = new byte[INTEGER_SIZE];
-//        try {
-//            new RandomAccessFile(metaFile, "r").read(reviewCounter);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return ByteBuffer.wrap(reviewCounter, 0, INTEGER_SIZE).getInt();
-//    }
+    public static boolean isInvalidationVectorIsDirty() {
+        return invalidationVectorIsDirty;
+    }
 
+    public static void setInvalidationVectorIsDirty(boolean invalidationVectorIsDirty) {
+        Statics.invalidationVectorIsDirty = invalidationVectorIsDirty;
+    }
+
+
+    public static byte[] intToByteArray(int intToConvert) {
+        ByteBuffer b = ByteBuffer.allocate(4);
+        b.putInt(intToConvert);
+        return b.array();
+    }
+
+    public static void deleteSortedFile(File indexDirectory) throws IOException {
+        File wordsSortedFile = new File(indexDirectory + File.separator
+                + Statics.WORDS_SORTED_FILE_NAME);
+        Files.delete(wordsSortedFile.toPath());
+    }
+
+
+    /*
+    No empty strings, all alphanumeric, lower cased BUT WITH long words > 127 chars
+     */
+    public static List<String> textToNormalizedTokens(String reviewTextLine) {
+        List<String> filteredTokens = new ArrayList<>();
+        String[] tokens = reviewTextLine.split("[^a-zA-Z0-9]+"); // alphanumeric
+        for (String token : tokens) {
+            if (!token.equals("")) // no empty
+                filteredTokens.add(token.toLowerCase());  // lower case but includes > 127
+        }
+        Collections.sort(filteredTokens);
+        return filteredTokens;
+    }
+
+    public static File createDirectory(String dir) {
+        File directory = new File(dir);
+        if (!directory.mkdir()) {
+            System.out.format("Directory %s already exists.", dir);
+        }
+        return directory;
+    }
 
     public static void writeHashmapToFile(Map<String, Integer> wordTermToTermID,
                                           File indexDirectory,
@@ -172,7 +170,7 @@ public final class Statics {
         TreeMap<String, Integer> orderedTermMapping = new TreeMap<>(wordTermToTermID);
         try {
             FileWriter fw = new FileWriter(indexDirectory.getPath() + File.separator
-                     + mappingType + TERM_MAP_FILE_DEBUG);
+                    + mappingType + TERM_MAP_FILE_DEBUG);
             for (Map.Entry<String, Integer> entry : orderedTermMapping.entrySet()) {
                 fw.write(entry.getKey());
                 fw.write(' ');
@@ -204,20 +202,6 @@ public final class Statics {
             e.printStackTrace();
         }
         return loadedMap;
-    }
-
-    /**
-     * This method calls the garbage collector and then returns the free
-     * memory. This avoids problems with applications where the GC hasn't
-     * reclaimed memory and reports no available memory.
-     *
-     * @return available memory
-     */
-    public static long estimateAvailableMemory() {
-        System.gc();
-        Runtime r = Runtime.getRuntime();
-        long allocatedMemory = r.totalMemory() - r.freeMemory();
-        return r.maxMemory() - allocatedMemory;
     }
 
     public static <T> void printList(List<T> list, File indexPath, String name) {

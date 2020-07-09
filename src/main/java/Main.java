@@ -20,13 +20,44 @@ public class Main {
     public static void main(String[] args) {
         final String localDir = System.getProperty("user.dir");
         final String indexDirectory = localDir + File.separatorChar + Statics.INDEXES_DIR_NAME;
+        final String indexLogMergDirectory = localDir + File.separatorChar + Statics.LOG_MERGE_INDEXES_DIR_NAME;
         final String insertionDirectory = localDir + File.separatorChar + INSERTION_DIR_NAME;
 
-        test(indexDirectory, insertionDirectory);
-//        removeIndex(indexDirectory);
+//        testRegularMerge(indexDirectory, insertionDirectory);
+        testLogMerge(indexLogMergDirectory);
     }
 
-    private static void test(String indexDirectory, String insertionDirectory) {
+    private static void testLogMerge(String indexDirectory) {
+        printDateAndTime();
+        ScalingCases scalingCases = new ScalingCases(INPUT_SCALE);
+        createTestLog(indexDirectory, scalingCases.getTestType());
+
+        ContinuousIndexWriter continuousIndexWriter = new ContinuousIndexWriter();
+        long startTime = System.currentTimeMillis();
+        continuousIndexWriter.construct(scalingCases.getInputFilename(), indexDirectory);
+        printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction: Log-Merged");
+        IndexReader indexReader = new IndexReader(indexDirectory, true);
+        queryWordIndex(continuousIndexWriter, indexReader, scalingCases);
+    }
+
+    private static void queryWordIndex(ContinuousIndexWriter continuousIndexWriter, IndexReader indexReader, ScalingCases scalingCases) {
+        tlog.println("===== #logMerged# words in index queries... =====");
+        testGetReviewsWithToken(continuousIndexWriter, indexReader, scalingCases.getWordQueries());
+        tlog.println("===== #logMerged# words not in index queries... =====");
+        testGetReviewsWithToken(continuousIndexWriter, indexReader, scalingCases.getNegWordQueries());
+        tlog.println("===== #logMerged# words inserted queries... =====");
+        testGetReviewsWithToken(continuousIndexWriter, indexReader, scalingCases.getInsertQueries());
+    }
+
+    private static void testGetReviewsWithToken(ContinuousIndexWriter continuousIndexWriter, IndexReader indexReader, String[] wordQueries) {
+        for (String word : wordQueries) {
+            Enumeration<Integer> res = indexReader.getReviewsWithToken(word, continuousIndexWriter);
+            tlog.print(word + ": " + System.lineSeparator());
+            printEnumeration(res);
+        }
+    }
+
+    private static void testRegularMerge(String indexDirectory, String insertionDirectory) {
         printDateAndTime();
         ScalingCases scalingCases = new ScalingCases(INPUT_SCALE, insertionDirectory);
         createTestLog(indexDirectory, scalingCases.getTestType());
@@ -37,7 +68,6 @@ public class Main {
         queryWordIndex(indexReader, scalingCases);
 
         indexReader = insertToIndex(indexDirectory, indexWriter, scalingCases, 6);
-//        IndexReader indexReader = new IndexReader(indexDirectory);
         queryWordIndex(indexReader, scalingCases);
 
         deleteReviews(indexDirectory, indexWriter, scalingCases);
@@ -58,11 +88,6 @@ public class Main {
     }
 
 
-    private static void deleteReviews(String indexDirectory, IndexWriter indexWriter, ScalingCases scalingCases) {
-        System.out.println("=====\n" + "Index deletion " + "\n=====");
-        indexWriter.removeReviews(indexDirectory, scalingCases.getDelReviews());
-    }
-
     private static IndexReader insertToIndex(String indexDirectory, IndexWriter indexWriter,
                                              ScalingCases scalingCases, int numberOfInsertions) {
         assert numberOfInsertions <= scalingCases.getNumberOfInsertionFiles();
@@ -73,10 +98,6 @@ public class Main {
                     scalingCases.getInsertFileName(i));
         }
         return new IndexReader(indexDirectory);
-    }
-
-    private static String getAuxiliaryIndexDirPattern(String indexDirectory, int num) {
-        return indexDirectory + File.separator + AUXILIARY_INDEX_DIR_PATTERN + num;
     }
 
 
@@ -123,11 +144,6 @@ public class Main {
         }
     }
 
-    private static void removeIndex(String indexDirectoryName) {
-        IndexRemover indexRemover = new IndexRemover();
-        indexRemover.removeAllIndexFiles(indexDirectoryName);
-    }
-
     private static void buildIndex(String indexDirectoryName, IndexWriter indexWriter,  String rawDataFilename) {
         long startTime = System.currentTimeMillis();
         indexWriter.constructIndex(rawDataFilename, indexDirectoryName);
@@ -138,6 +154,20 @@ public class Main {
         long startTime = System.currentTimeMillis();
         indexWriter.insert(rawDataFilename, auxIndexDirectoryName);
         printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
+    }
+
+    private static void deleteReviews(String indexDirectory, IndexWriter indexWriter, ScalingCases scalingCases) {
+        System.out.println("=====\n" + "Index deletion " + "\n=====");
+        indexWriter.removeReviews(indexDirectory, scalingCases.getDelReviews());
+    }
+
+    private static String getAuxiliaryIndexDirPattern(String indexDirectory, int num) {
+        return indexDirectory + File.separator + AUXILIARY_INDEX_DIR_PATTERN + num;
+    }
+
+    private static void removeIndex(String indexDirectoryName) {
+        IndexRemover indexRemover = new IndexRemover();
+        indexRemover.removeAllIndexFiles(indexDirectoryName);
     }
 
     private static void printEnumeration(Enumeration<?> enumToPrint) {
