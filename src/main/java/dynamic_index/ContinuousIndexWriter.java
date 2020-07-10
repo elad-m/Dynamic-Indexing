@@ -17,9 +17,11 @@ import static dynamic_index.Statics.*;
 
 public class ContinuousIndexWriter {
 
-    private File mainIndexDirectory;
-
     private final TemporaryIndex temporaryIndex;
+
+    private File mainIndexDirectory;
+    private File invalidationFile;
+    private BufferedOutputStream invalidationBOS;
 
     private int reviewCounter = 1; // not necessarily the number of reviews in index in practice because deletion
     private int tokenCounter = 0; // token counter only incremented in the mapping stage
@@ -29,8 +31,15 @@ public class ContinuousIndexWriter {
     }
 
     public void construct(String inputFile, String mainIndexDirectory) {
-        this.mainIndexDirectory = createDirectory(mainIndexDirectory);
-        constructContinuously(inputFile, reviewCounter);
+        try {
+            this.mainIndexDirectory = createDirectory(mainIndexDirectory);
+            this.invalidationFile = new File(mainIndexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME);
+            invalidationBOS = new BufferedOutputStream(new FileOutputStream(invalidationFile));
+            constructContinuously(inputFile, reviewCounter);
+            invalidationBOS.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void constructContinuously(String inputFile, int reviewCounter) {
@@ -47,15 +56,16 @@ public class ContinuousIndexWriter {
                     if (field.equals(REVIEW_TEXT_FIELD)) {
                         feedTextToIndexWriter(value); // first stage of sort
                         incrementReviewCounter();
+                        invalidationBOS.write(0);
                     }
                 }
                 line = bufferedReaderOfRawInput.readLine();
             }
+            writeToInvalidationVector(mainIndexDirectory.getAbsolutePath(), 0, reviewCounter);
             bufferedReaderOfRawInput.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         printElapsedTime(blockWriterStartTime, "First Sort Iteration Time: ");
     }
 
@@ -75,6 +85,27 @@ public class ContinuousIndexWriter {
         }
     }
 
+    /** Looks for the corresponding BYTES in the invalidation vector file and "flips" them to 1
+     * @param indexDirectory - directory of the main index, aka "indexes"
+     * @param ridsToDelete - review ids to delete. If not in range, will ignore.
+     */
+    public void removeReviews(String indexDirectory, int[] ridsToDelete) {
+        markInvalidationVector(indexDirectory, ridsToDelete);
+    }
+
+    TreeMap<Integer, Integer> getReviewsWithToken(String token) {
+        InvertedIndex invertedIndex =  temporaryIndex.wordToInvertedIndexMap.get(token);
+        TreeMap<Integer, Integer> ridToFrequencies;
+        if(invertedIndex == null){ // not found, return empty
+            ridToFrequencies = new TreeMap<>();
+        } else {
+            assert !invertedIndex.isWithFile();
+            ridToFrequencies = invertedIndex.getRidToFrequencyMap();
+            filterResults(invalidationFile, ridToFrequencies);
+        }
+        return ridToFrequencies;
+    }
+
     private void incrementTokenCounter() {
         tokenCounter++;
     }
@@ -86,18 +117,6 @@ public class ContinuousIndexWriter {
 
     private void incrementReviewCounter() {
         reviewCounter++;
-    }
-
-    TreeMap<Integer, Integer> getReviewsWithToken(String token) {
-        InvertedIndex invertedIndex =  temporaryIndex.wordToInvertedIndexMap.get(token);
-        TreeMap<Integer, Integer> ridToFrequencies;
-        if(invertedIndex == null){ // not found, return empty
-            ridToFrequencies = new TreeMap<>();
-        } else {
-            assert !invertedIndex.isWithFile();
-            ridToFrequencies = invertedIndex.getRidToFrequencyMap();
-        }
-        return ridToFrequencies;
     }
 
     private class TemporaryIndex {
@@ -132,18 +151,18 @@ public class ContinuousIndexWriter {
         }
 
         private void writeTemporaryIndex() throws IOException {
-            TreeMap<Integer, File> sizeToFile = getSizeToFileMap();
-            putTempIndexInMap(sizeToFile);
-            int numberOfFirstIndexDirectoriesToMerge = getNumberOfFirstIndexDirectoriesToMerge(sizeToFile);
+            TreeMap<Integer, File> indexSizeToIndexDirectory = getSizeToFileMap();
+            putTempIndexInMap(indexSizeToIndexDirectory);
+            int numberOfFirstIndexDirectoriesToMerge = getNumberOfFirstIndexDirectoriesToMerge(indexSizeToIndexDirectory);
 
             if(numberOfFirstIndexDirectoriesToMerge == 1){// just rename Z0 to 0
-                Path z0Path = sizeToFile.firstEntry().getValue().toPath();
+                Path z0Path = indexSizeToIndexDirectory.firstEntry().getValue().toPath();
                 Files.move(z0Path, z0Path.resolveSibling("0"));
             } else if(numberOfFirstIndexDirectoriesToMerge > 1){ // at least two indexes to merge
-                File mergedDirectory = mergeIndexDirectories(sizeToFile, numberOfFirstIndexDirectoriesToMerge);
-                setInvalidationVector(numberOfFirstIndexDirectoriesToMerge == sizeToFile.size());
+                File mergedDirectory = mergeIndexDirectories(indexSizeToIndexDirectory, numberOfFirstIndexDirectoriesToMerge);
+                setInvalidationVector(numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size());
                 renameMergedDirectory(mergedDirectory, numberOfFirstIndexDirectoriesToMerge);
-                (new IndexRemover()).removeFiles(sizeToFile);
+                (new IndexRemover()).removeFiles(indexSizeToIndexDirectory);
             }
         }
 

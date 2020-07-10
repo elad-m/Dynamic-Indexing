@@ -43,18 +43,7 @@ public final class Statics {
 
     private static boolean invalidationVectorIsDirty = false;
 
-    public static int calculateNumOfTokensInFrontCodeBlock(int numOfTokens) {
-        //        if (numOfTokens > 10000 && numOfTokens <= 1000000) { // 10,000 to 1 million
-//            tokensPerBlock = (int) Math.pow(tokensPerBlock, 2);
-//        } else if (numOfTokens > 1000000) {
-//            tokensPerBlock = (int) Math.pow(tokensPerBlock, 3);
-//        }
-        return BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
-    }
-
-    public static int roundDownToMultiplicationOf(int roundItDown, int multiplicationOf) {
-        return (roundItDown / multiplicationOf) * multiplicationOf;
-    }
+    //=========================  Printing  =====================================//
 
     public static void printElapsedTime(long startTime, String methodName) {
         long endTime = System.currentTimeMillis();
@@ -86,6 +75,20 @@ public final class Statics {
                 elapsedTimeMilliSeconds);
     }
 
+    //====================================  Sizes  =====================================//
+
+    public static int calculateNumOfTokensInFrontCodeBlock(int numOfTokens) {
+        //        if (numOfTokens > 10000 && numOfTokens <= 1000000) { // 10,000 to 1 million
+//            tokensPerBlock = (int) Math.pow(tokensPerBlock, 2);
+//        } else if (numOfTokens > 1000000) {
+//            tokensPerBlock = (int) Math.pow(tokensPerBlock, 3);
+//        }
+        return BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
+    }
+
+    public static int roundDownToMultiplicationOf(int roundItDown, int multiplicationOf) {
+        return (roundItDown / multiplicationOf) * multiplicationOf;
+    }
 
     public static int estimateBestSizeOfWordsBlocks(final long numOfTokens, final boolean withFreeMemory) {
         long estimatedSizeOfFile = numOfTokens * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
@@ -111,12 +114,29 @@ public final class Statics {
         return (int) blockSize;
     }
 
+    public static byte[] intToByteArray(int intToConvert) {
+        ByteBuffer b = ByteBuffer.allocate(4);
+        b.putInt(intToConvert);
+        return b.array();
+    }
+
+    //=========================  External Sort  =====================================//
+
     public static Map<Integer, String> swapHashMapDirections(Map<String, Integer> termToTermID) {
         Map<Integer, String> swapped = termToTermID.entrySet().stream().collect(
                 Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
         termToTermID.clear();
         return swapped;
     }
+
+
+    public static void deleteSortedFile(File indexDirectory) throws IOException {
+        File wordsSortedFile = new File(indexDirectory + File.separator
+                + Statics.WORDS_SORTED_FILE_NAME);
+        Files.delete(wordsSortedFile.toPath());
+    }
+
+    //=========================  invalidation vector  =====================================//
 
     public static boolean isInvalidationVectorIsDirty() {
         return invalidationVectorIsDirty;
@@ -126,19 +146,51 @@ public final class Statics {
         Statics.invalidationVectorIsDirty = invalidationVectorIsDirty;
     }
 
-
-    public static byte[] intToByteArray(int intToConvert) {
-        ByteBuffer b = ByteBuffer.allocate(4);
-        b.putInt(intToConvert);
-        return b.array();
+    public static void markInvalidationVector(String indexDirectory, int[] ridsToDelete){
+        try{
+            RandomAccessFile raValidationVectorFile = new RandomAccessFile(
+                    indexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
+            for(int rid: ridsToDelete){
+                raValidationVectorFile.seek(rid - 1);
+                raValidationVectorFile.writeByte(1);
+            }
+            setInvalidationVectorIsDirty(true);
+            raValidationVectorFile.close();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
-    public static void deleteSortedFile(File indexDirectory) throws IOException {
-        File wordsSortedFile = new File(indexDirectory + File.separator
-                + Statics.WORDS_SORTED_FILE_NAME);
-        Files.delete(wordsSortedFile.toPath());
+    public static void writeToInvalidationVector(String mainIndexPath, int initialReviewCounter, int reviewCounter) throws IOException {
+        int numberOfReviewsAdded = reviewCounter - initialReviewCounter;
+        RandomAccessFile raValidationVectorFile = new RandomAccessFile(
+                mainIndexPath + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
+        raValidationVectorFile.seek(initialReviewCounter);
+        for(int i = 0; i < numberOfReviewsAdded; i++){
+            raValidationVectorFile.writeByte(0);
+        }
+        raValidationVectorFile.close();
     }
 
+    public static void filterResults(File invalidationVector, TreeMap<Integer, Integer> unfilteredResults){
+        try{
+            RandomAccessFile raToInvalidationVector = new RandomAccessFile(invalidationVector, "r");
+            int byteRead;
+            for(Iterator<Map.Entry<Integer, Integer>> it = unfilteredResults.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<Integer, Integer> entry = it.next();
+                raToInvalidationVector.seek(entry.getKey() - 1); // byte zero holds rid=1
+                byteRead = raToInvalidationVector.read();
+                if(byteRead == 1){
+                    it.remove();
+                }
+            }
+            raToInvalidationVector.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //===============================  Misc  =====================================//
 
     /*
     No empty strings, all alphanumeric, lower cased BUT WITH long words > 127 chars
@@ -161,6 +213,8 @@ public final class Statics {
         }
         return directory;
     }
+
+    //=========================  Writing for Meta and Testing  =====================================//
 
     public static void writeHashmapToFile(Map<String, Integer> wordTermToTermID,
                                           File indexDirectory,

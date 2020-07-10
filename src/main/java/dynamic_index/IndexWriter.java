@@ -211,19 +211,10 @@ public class IndexWriter {
 
 //        if (!SKIP_SORTING)
 //            writeMetaData();
-        writeToInvalidationVector(mainIndexDirectory, initialReviewCounter);
+        writeToInvalidationVector(mainIndexDirectory, initialReviewCounter, reviewCounter);
         deleteSortedFile(currentIndexDirectory);
     }
 
-    private void writeToInvalidationVector(String mainIndexPath, int initialReviewCounter) throws IOException {
-        int numberOfReviewsAdded = reviewCounter - initialReviewCounter;
-        RandomAccessFile raValidationVectorFile = new RandomAccessFile(
-                mainIndexPath + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
-        raValidationVectorFile.seek(initialReviewCounter);
-        for(int i = 0; i < numberOfReviewsAdded; i++){
-            raValidationVectorFile.writeByte(0);
-        }
-    }
 
 //    private void writeMetaData()
 //            throws IOException {
@@ -252,17 +243,7 @@ public class IndexWriter {
      * @param ridsToDelete - review ids to delete. If not in range, will ignore.
      */
     public void removeReviews(String indexDirectory, int[] ridsToDelete) {
-        try{
-            RandomAccessFile raValidationVectorFile = new RandomAccessFile(
-                    indexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
-            for(int rid: ridsToDelete){
-                raValidationVectorFile.seek(rid - 1);
-                raValidationVectorFile.writeByte(1);
-            }
-            setInvalidationVectorIsDirty(true);
-        } catch (IOException e){
-            e.printStackTrace();
-        }
+        markInvalidationVector(indexDirectory, ridsToDelete);
     }
 
     /**

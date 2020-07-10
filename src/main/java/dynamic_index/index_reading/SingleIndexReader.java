@@ -8,6 +8,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
+import static dynamic_index.Statics.filterResults;
 import static java.lang.System.exit;
 
 
@@ -39,9 +40,7 @@ public class SingleIndexReader {
     final File mainIndexDirectory;
     private final File invertedIndexFile;
 
-    public int getIndexDictionaryLength() {
-        return indexDictionary.length;
-    }
+
 
     private byte[] indexDictionary;
     private byte[] concatString;
@@ -191,7 +190,7 @@ public class SingleIndexReader {
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
         if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion
-            filterResults(results);
+            filterResults(invalidationVector, results);
         }
         return results;
     }
@@ -200,27 +199,11 @@ public class SingleIndexReader {
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
         if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion
-            filterResults(results);
+            filterResults(invalidationVector, results);
         }
         return results;
     }
 
-    private void filterResults(TreeMap<Integer, Integer> unfilteredResults){
-        try{
-            RandomAccessFile raToInvalidationVector = new RandomAccessFile(invalidationVector, "r");
-            int byteRead;
-            for(Iterator<Map.Entry<Integer, Integer>> it = unfilteredResults.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<Integer, Integer> entry = it.next();
-                raToInvalidationVector.seek(entry.getKey() - 1); // byte zero holds rid=1
-                byteRead = raToInvalidationVector.read();
-                if(byteRead == 1){
-                    it.remove();
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     private byte[] getBytesOfInvertedIndexRAF(TokenMetaData pointerAndLength) throws IOException {
         RandomAccessFile raInvertedIndexFile = new RandomAccessFile(invertedIndexFile, "r");
@@ -274,7 +257,6 @@ public class SingleIndexReader {
                     break;
             }
         }
-//        Statics.printList(integersInBytesRow, indexDirectory, tokenToFind + "vector.txt");
         return integersInBytesRow;
     }
 
@@ -338,13 +320,16 @@ public class SingleIndexReader {
         return finalMap;
     }
 
-
     public File getInvertedIndexFile() {
         return invertedIndexFile;
     }
+
     public int getFRONT_CODE_ROW_SIZE_IN_BYTES() {
         return FRONT_CODE_ROW_SIZE_IN_BYTES;
     }
 
+    public int getIndexDictionaryLength() {
+        return indexDictionary.length;
+    }
 
 }

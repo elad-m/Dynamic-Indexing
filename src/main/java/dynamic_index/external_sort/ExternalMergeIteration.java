@@ -126,7 +126,6 @@ public class ExternalMergeIteration {
         final int BLOCK_SIZE_IN_PAIRS;
         final int runNum;
         final Queue<TermIdReviewIdPair> queue;
-//        RandomAccessFile raInputFile;
         BufferedInputStream inputFileBuffer;
         boolean closed =false;
         boolean isDoneReadingFile = false; // there are no more bytes to read from input file
@@ -136,7 +135,6 @@ public class ExternalMergeIteration {
             BLOCK_SIZE_IN_PAIRS = blockSizeInPairs;
             this.runNum = runNum;
             try {
-//                this.raInputFile =  new RandomAccessFile(inputFile, "r");
                 this.inputFileBuffer = new BufferedInputStream(new FileInputStream(inputFile));
             } catch (FileNotFoundException e) {
                 e.printStackTrace();

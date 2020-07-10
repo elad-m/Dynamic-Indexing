@@ -62,7 +62,7 @@ public class IndexReader {
      */
     public IndexReader(String dir, boolean dummyForLogMerge){
         this.mainIndexDirectory = new File(dir);
-        List<File> allFiles = Arrays.asList(Objects.requireNonNull(mainIndexDirectory.listFiles()));
+        List<File> allFiles = Arrays.asList(Objects.requireNonNull(mainIndexDirectory.listFiles(File::isDirectory)));
         this.numOfSubIndexes = allFiles.size();
         loadNFirstIndexes(allFiles);
     }
@@ -253,7 +253,8 @@ public class IndexReader {
     }
 
     /**
-     * Creates and returns IndexMergingModerator for the log-merge: merging all numOfSubIndexes directories.
+     * Creates and returns IndexMergingModerator for the log-merge: merging all numOfSubIndexes directories: so
+     * not necessarily all sub-indexes, but all sub-indexes that should be merged.
      * Should be only used when initializes with the log-merge constructor, i.e. no main index.
      * @return IndexMergingModerator with all indexes according to constructor index initialization.
      */
