@@ -12,8 +12,11 @@ import static dynamic_index.Statics.printElapsedTimeToLog;
 public class LogMergeExperiment extends Experiment{
 
 
-    public LogMergeExperiment(String localDir) {
-        super(localDir, localDir + File.separatorChar + Statics.LOG_MERGE_INDEXES_DIR_NAME);
+    public LogMergeExperiment(String localDir, int inputScale) {
+        super(localDir,
+                localDir + File.separatorChar + Statics.LOG_MERGE_INDEXES_DIR_NAME,
+                inputScale,
+                true);
     }
 
     @Override
@@ -37,7 +40,7 @@ public class LogMergeExperiment extends Experiment{
 
     private void queryAfterDelete(ContinuousIndexWriter continuousIndexWriter, IndexReader indexReader) {
         tlog.println("===== words after deleted reviews... =====");
-        testGetReviewsWithToken(continuousIndexWriter, indexReader, scalingCases.getDelQueries());
+        testGetReviewsWithToken(continuousIndexWriter, indexReader, scalingCases.getWordQueries());
     }
 
     private ContinuousIndexWriter buildIndex(){

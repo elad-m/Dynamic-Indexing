@@ -45,13 +45,12 @@ public class IndexReader {
     /**
      * For getting a log-merger.
      * @param dir - directory in which all indexes are.
-     * @param allIndexFiles - all index files in mainIndexDirectory
-     * @param numberOfIndexDirectories - read to memory only this number of indexes
+     * @param indexFilesToMerge - index directories that would be merged.
      */
-    IndexReader(String dir, Collection<File> allIndexFiles, int numberOfIndexDirectories) {
+    IndexReader(String dir, Collection<File> indexFilesToMerge) {
         this.mainIndexDirectory = new File(dir);
-        this.numOfSubIndexes = numberOfIndexDirectories;
-        loadNFirstIndexes(allIndexFiles);
+        this.numOfSubIndexes = indexFilesToMerge.size();
+        loadNFirstIndexes(indexFilesToMerge);
     }
 
     /**
@@ -62,20 +61,16 @@ public class IndexReader {
      */
     public IndexReader(String dir, boolean dummyForLogMerge){
         this.mainIndexDirectory = new File(dir);
-        List<File> allFiles = Arrays.asList(Objects.requireNonNull(mainIndexDirectory.listFiles(File::isDirectory)));
-        this.numOfSubIndexes = allFiles.size();
-        loadNFirstIndexes(allFiles);
+        List<File> allDirectories = Arrays.asList(Objects.requireNonNull(mainIndexDirectory.listFiles(File::isDirectory)));
+        this.numOfSubIndexes = allDirectories.size();
+        loadNFirstIndexes(allDirectories);
     }
 
-    private void loadNFirstIndexes(Collection<File> allIndexFiles) {
+    private void loadNFirstIndexes(Collection<File> indexFilesToMerge) {
         try {
-            assert numOfSubIndexes <= allIndexFiles.size();
             instantiateSubIndexArrays();
             int i = 0;
-            for(File indexDir: allIndexFiles){
-                if(i == numOfSubIndexes){
-                    break;
-                }
+            for(File indexDir: indexFilesToMerge){
                 loadSingleSubIndex(indexDir, i);
                 i++;
             }
@@ -195,7 +190,8 @@ public class IndexReader {
                     subIndexesConcatString[i],
                     subInvertedIndexFiles[i],
                     invalidationVector,
-                    subNumOfWordsInFrontCodeBlock[i], mainIndexDirectory);
+                    subNumOfWordsInFrontCodeBlock[i],
+                    mainIndexDirectory);
             TreeMap<Integer, Integer> auxResults = singleIndexReader.getReviewsWithWord(token);
             unionOfResults.putAll(auxResults);
         }

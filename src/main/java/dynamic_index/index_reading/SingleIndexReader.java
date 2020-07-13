@@ -38,9 +38,10 @@ public class SingleIndexReader {
     private String tokenToFind;
 
     final File mainIndexDirectory;
+
+
+    final File currentIndexDirectory;
     private final File invertedIndexFile;
-
-
 
     private byte[] indexDictionary;
     private byte[] concatString;
@@ -50,10 +51,12 @@ public class SingleIndexReader {
                              byte[] mainConcatString,
                              File invertedIndexFile,
                              File invalidationVector,
-                             int numOfTokensPerBlock, File mainIndexDirectory) {
+                             int numOfTokensPerBlock,
+                             File mainIndexDirectory) {
         this.invertedIndexFile = invertedIndexFile;
         this.invalidationVector = invalidationVector;
         this.mainIndexDirectory = mainIndexDirectory;
+        this.currentIndexDirectory = invertedIndexFile.getParentFile();
         assignArrays(mainIndexDictionary, mainConcatString);
         this.NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK = numOfTokensPerBlock;
         FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE =
@@ -81,16 +84,16 @@ public class SingleIndexReader {
 
     private TreeMap<Integer, Integer> findInvertedIndexLine(String word)
             throws IOException {
-        TreeMap<Integer,Integer> map;
+        TreeMap<Integer,Integer> ridToFrequencyMap;
         TokenMetaData tokenMetaData = binarySearch(word,
                 0,
                 (indexDictionary.length / FRONT_CODE_ROW_SIZE_IN_BYTES) - 1);
         if (tokenMetaData == null) {
-            map = new TreeMap<>();
+            ridToFrequencyMap = new TreeMap<>();
         } else {
-            map = getMapFromTokenMetaData(tokenMetaData);
+            ridToFrequencyMap = getRidToFreqMapFromTokenMetaData(tokenMetaData);
         }
-        return map;
+        return ridToFrequencyMap;
     }
 
 
@@ -184,7 +187,7 @@ public class SingleIndexReader {
         }
     }
 
-    private TreeMap<Integer, Integer> getMapFromTokenMetaData(TokenMetaData pointerAndLength)
+    private TreeMap<Integer, Integer> getRidToFreqMapFromTokenMetaData(TokenMetaData pointerAndLength)
             throws IOException {
         byte[] rowToReadInto = getBytesOfInvertedIndexRAF(pointerAndLength);
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
@@ -195,7 +198,7 @@ public class SingleIndexReader {
         return results;
     }
 
-    TreeMap<Integer, Integer> getMapFromRawInvertedIndex(byte[] rowToReadInto) {
+    TreeMap<Integer, Integer> getRidToFreqMapFromRawInvertedIndex(byte[] rowToReadInto) {
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
         if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion
@@ -330,6 +333,10 @@ public class SingleIndexReader {
 
     public int getIndexDictionaryLength() {
         return indexDictionary.length;
+    }
+
+    public File getCurrentIndexDirectory() {
+        return currentIndexDirectory;
     }
 
 }

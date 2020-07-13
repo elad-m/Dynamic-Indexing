@@ -95,18 +95,16 @@ public class IndexWriter {
     }
 
     private void writeHashmapFor100Random() {
-        writeHashmapToFile(wordTermToTermID, currentIndexDirectory, WORDS_MAPPING, inputScaleType);
+        // adds to the same file at the main directory
+        File mainIndexDirFile = new File(mainIndexDirectory);
+        writeHashmapToFile(wordTermToTermID, mainIndexDirFile, WORDS_MAPPING, inputScaleType);
     }
 
     private void constructTermToTermIDMapping(String inputFile) throws IOException {
         System.out.println("Starting term mapping:");
-//        long startTime = System.currentTimeMillis();
-
         Set<String> wordTerms = getTermsSorted(inputFile); // first reading of whole input file
         createMappingForSet(wordTerms, wordTermToTermID);
-
         wordTerms.clear();
-//        printElapsedTime(startTime, " Building Term To Term ID mapping: ");
     }
 
     private Set<String> getTermsSorted(String inputFile) throws IOException {

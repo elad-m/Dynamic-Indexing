@@ -6,13 +6,17 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.SortedMap;
 import java.util.TreeMap;
+
+import static dynamic_index.Statics.TERM_MAP_FILE_DEBUG;
+import static dynamic_index.Statics.WORDS_MAPPING;
 
 
 public class IndexRemover {
 
     private boolean useExceptions = false;
-
+    private String wordsMappingFilename =WORDS_MAPPING + TERM_MAP_FILE_DEBUG;
 
     void removeFilesAfterMerge(String dir) {
         useExceptions = true;
@@ -20,7 +24,8 @@ public class IndexRemover {
         deleteFileOrDirectory(file);
     }
 
-    void removeFiles(TreeMap<Integer, File> sizeToFile){
+    void removeFiles(SortedMap<Integer, File> sizeToFile){
+        useExceptions = true;
         for(File file : sizeToFile.values()){
             deleteDirectory(file);
         }
@@ -47,7 +52,9 @@ public class IndexRemover {
     private void deleteDirectory(File toDelete) {
         try {
             // not deleting the merged index directory and files
-            if (useExceptions && !toDelete.getName().equals(Statics.MERGED_INDEX_DIRECTORY)) {
+            if(useExceptions){
+                deleteDirectoryWithExceptions(toDelete);
+            } else {
                 File[] childFiles = toDelete.listFiles();
                 if (childFiles != null) {
                     if (childFiles.length == 0) { //Directory is empty. Proceed for deletion
@@ -57,7 +64,29 @@ public class IndexRemover {
                             deleteFileOrDirectory(childFilePath);
                         }
                         // not deleting the indexes directory itself after deleting its contents
-                        if (useExceptions && !toDelete.getName().equals(Statics.INDEXES_DIR_NAME)) {
+                        deleteDirectory(toDelete); // calling again, now should be empty
+                    }
+                }
+            }
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void deleteDirectoryWithExceptions(File toDelete) {
+        try {
+            // not deleting the merged index directory and files
+            if (!toDelete.getName().equals(Statics.MERGED_INDEX_DIRECTORY)) {
+                File[] childFiles = toDelete.listFiles();
+                if (childFiles != null) {
+                    if (childFiles.length == 0) { //Directory is empty. Proceed for deletion
+                        singleDelete(toDelete);
+                    } else {
+                        for (File childFilePath : childFiles) {
+                            deleteFileOrDirectory(childFilePath);
+                        }
+                        // not deleting the indexes directory itself after deleting its contents
+                        if (!toDelete.getName().equals(Statics.INDEXES_DIR_NAME)) {
                             deleteDirectory(toDelete); // calling again, now should be empty
                         }
                     }
@@ -70,7 +99,7 @@ public class IndexRemover {
 
     private void singleDelete(File singleFileToDelete) {
         Path dirPathToDelete = singleFileToDelete.toPath();
-        if (!singleFileToDelete.getName().equals(Statics.INVALIDATION_VECTOR_FILENAME)) {
+        if (shouldDeleteFile(singleFileToDelete.getName())) {
             try {
                 Files.delete(dirPathToDelete);
             } catch (NoSuchFileException x) {
@@ -86,5 +115,9 @@ public class IndexRemover {
         }
     }
 
+    private boolean shouldDeleteFile(String fileName){
+        return !fileName.equals(Statics.INVALIDATION_VECTOR_FILENAME) &&
+                !fileName.equals(wordsMappingFilename);
+    }
 
 }

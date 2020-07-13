@@ -5,7 +5,6 @@ import dynamic_index.IndexWriter;
 import dynamic_index.Statics;
 
 import java.io.File;
-import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -15,8 +14,11 @@ import static dynamic_index.Statics.printElapsedTimeToLog;
 public class SimpleMergeExperiment extends Experiment {
 
 
-    public SimpleMergeExperiment(String localDir) {
-        super(localDir, localDir + File.separatorChar + Statics.INDEXES_DIR_NAME);
+    public SimpleMergeExperiment(String localDir, int inputScale) {
+        super(localDir,
+                localDir + File.separatorChar + Statics.INDEXES_DIR_NAME,
+                inputScale,
+                false);
     }
 
     @Override
@@ -28,7 +30,7 @@ public class SimpleMergeExperiment extends Experiment {
         IndexReader indexReader = new IndexReader(indexDirectory);
         queryAfterBuildIndex(indexReader);
 
-        indexReader = insertToIndex(indexWriter, 6);
+        indexReader = insertToIndex(indexWriter);
         queryAfterInsert(indexReader);
 
         deleteReviews(indexWriter);
@@ -50,8 +52,6 @@ public class SimpleMergeExperiment extends Experiment {
 
     private void queryAfterMerge(IndexReader indexReader) {
         queryAfterBuildIndex(indexReader);
-        queryAfterInsert(indexReader);
-        queryAfterDelete(indexReader);
     }
 
 
@@ -62,11 +62,12 @@ public class SimpleMergeExperiment extends Experiment {
 
     private void queryAfterDelete(IndexReader indexReader) {
         tlog.println("===== words after deleted reviews... =====");
-        testGetReviewsWithToken(indexReader, scalingCases.getDelQueries());
+        testGetReviewsWithToken(indexReader, scalingCases.getWordQueries());
     }
 
-    private IndexReader insertToIndex(IndexWriter indexWriter, int numberOfInsertions) {
-        assert numberOfInsertions <= scalingCases.getNumberOfInsertionFiles();
+    private IndexReader insertToIndex(IndexWriter indexWriter) {
+        int numberOfInsertions = scalingCases.getNumberOfInsertionFiles();
+//        assert numberOfInsertions <= scalingCases.getNumberOfInsertionFiles();
         for (int i = 0; i < numberOfInsertions; i++) {
             System.out.println("=====\n" + "Index insertion number " + i + "\n=====");
             insertToIndex(indexWriter,
@@ -84,18 +85,19 @@ public class SimpleMergeExperiment extends Experiment {
 
     private void queryAfterInsert(IndexReader indexReader){
         tlog.println("===== words inserted queries... =====");
-        testGetReviewsWithToken(indexReader, scalingCases.getInsertQueries());
+        testGetReviewsWithToken(indexReader, scalingCases.getWordQueries());
     }
 
     private IndexWriter buildIndex() {
         long startTime = System.currentTimeMillis();
-        IndexWriter indexWriter = new IndexWriter(indexDirectory, INPUT_SCALE);
+        IndexWriter indexWriter = new IndexWriter(indexDirectory, inputScale);
         indexWriter.constructIndex(scalingCases.getInputFilename(), indexDirectory);
         printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
         return indexWriter;
     }
 
     private void queryAfterBuildIndex(IndexReader indexReader) {
+        tlog.println("===== After Build/Merge... =====");
         tlog.println("===== words in index queries... =====");
         testGetReviewsWithToken(indexReader, scalingCases.getWordQueries());
         tlog.println("===== words not in index queries... =====");

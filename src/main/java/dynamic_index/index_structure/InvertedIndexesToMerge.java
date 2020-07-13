@@ -18,8 +18,13 @@ import java.util.TreeMap;
  */
 public class InvertedIndexesToMerge implements WritingMeasurable{
 
+    private final String word;
     private final TreeMap<Integer, InvertedIndex> firstRidToInvertedIndex = new TreeMap<>();
     private int amountOfBytesWrittenExternalOutput = 0;
+
+    public InvertedIndexesToMerge(String word) {
+        this.word = word;
+    }
 
     /**
      * Puts the InvertedIndex object in the map, while its first rid is the key.
@@ -37,8 +42,15 @@ public class InvertedIndexesToMerge implements WritingMeasurable{
     public void writeTo(BufferedOutputStream invertedOutputStream) {
         int lastRid = 0;
         // writing all rids
+//        if(word.equals("a")
+//                && firstRidToInvertedIndex.size() > 0
+//                && firstRidToInvertedIndex.firstKey() == 1)
+//            System.out.println("here");
         for(InvertedIndex invertedIndex: firstRidToInvertedIndex.values()){
             lastRid = invertedIndex.writeCompressedRidsTo(invertedOutputStream, lastRid);
+            if(lastRid > 13000){
+                System.out.println("here");
+            }
         }
         //writing all frequencies
         for(InvertedIndex invertedIndex: firstRidToInvertedIndex.values()){

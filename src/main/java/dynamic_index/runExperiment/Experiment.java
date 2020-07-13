@@ -11,18 +11,18 @@ import java.util.Enumeration;
 
 abstract public class Experiment {
 
-    final String INSERTION_DIR_NAME = "E1TestResources";
     final String AUXILIARY_INDEX_DIR_PATTERN = "aux";
     public PrintWriter tlog = null;
-    static final int INPUT_SCALE = 1;
-    final String insertionDirectory;
+    public int inputScale = 1;
     final String indexDirectory;
+    final String indexParentDirectory;
     final ScalingCases scalingCases;
 
-    public Experiment(String localDir, String indexDirectoryName){
+    public Experiment(String localDir, String indexDirectoryName, int inputScale, boolean logMergeType){
+        this.indexParentDirectory = localDir;
         this.indexDirectory = indexDirectoryName;
-        this.insertionDirectory = localDir + File.separatorChar + INSERTION_DIR_NAME;
-        this.scalingCases = new ScalingCases(INPUT_SCALE, insertionDirectory);
+        this.inputScale = inputScale;
+        this.scalingCases = new ScalingCases(this.inputScale, logMergeType);
     }
 
 

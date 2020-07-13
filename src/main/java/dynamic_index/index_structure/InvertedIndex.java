@@ -21,10 +21,10 @@ public class InvertedIndex implements WritingMeasurable {
     private static final int[] BITWISE_OR_OPERAND_TO_ENCODE_LENGTH_PRECODED_VARINT =
             {0, 16384, 8388608, -1073741824}; // 00|zeros, 2^14, 2^23, 2^31+2^30
 
-    public static int MAX_NUM_OF_PAIRS = 500;
+    public static int MAX_NUM_OF_PAIRS = 4096;
 
     private final String word;
-
+    private final String indexName;
 
 
     /**
@@ -57,6 +57,7 @@ public class InvertedIndex implements WritingMeasurable {
     public InvertedIndex(String word, int rid, File indexDirectory){
         this.word = word;
         this.indexDirectory = indexDirectory;
+        this.indexName = indexDirectory.getName();
         put(rid, 1);
     }
 
@@ -64,11 +65,16 @@ public class InvertedIndex implements WritingMeasurable {
      * Create inverted index with some bulk of data of a word.
      * @param word - the word this inverted index belongs to.
      * @param ridToFrequency - review IDs and the frequency that the word appears in
-     * @param indexDirectory - where to keep temporary files if necessary
+     * @param mainIndexDirectory - where to keep temporary files if necessary, parent of the next parameter
+     * @param currentIndexDirectory - where the index directory source of this inverted index is.
      */
-    public InvertedIndex(String word, Map<Integer, Integer> ridToFrequency, File indexDirectory) {
+    public InvertedIndex(String word,
+                         Map<Integer, Integer> ridToFrequency,
+                         File mainIndexDirectory,
+                         File currentIndexDirectory) {
         this.word = word;
-        this.indexDirectory = indexDirectory;
+        this.indexDirectory = mainIndexDirectory;
+        this.indexName = currentIndexDirectory.getName();
         putAll(ridToFrequency);
     }
 
@@ -115,7 +121,7 @@ public class InvertedIndex implements WritingMeasurable {
                 withFile = true;
                 firstRidInFile = ridToFrequencyMap.firstKey(); // happens only once
             }
-            for(Map.Entry<Integer, Integer> ridAndFrequency: ridToFrequencyMap.entrySet()){ // written as is
+            for(Map.Entry<Integer, Integer> ridAndFrequency: ridToFrequencyMap.entrySet()){ // written to file as ints
                 dosRawRidDumpFile.writeInt(ridAndFrequency.getKey());
                 dosRawFreqDumpFile.writeInt(ridAndFrequency.getValue());
             }
@@ -129,9 +135,9 @@ public class InvertedIndex implements WritingMeasurable {
     }
 
     private void createFileAndStream() throws FileNotFoundException {
-        ridDumpFile = new File(indexDirectory.getPath() + File.separator + word + "RidTmp"
+        ridDumpFile = new File(indexDirectory.getPath() + File.separator + word + "RidTmp" + indexName
                 + Statics.BINARY_FILE_SUFFIX);
-        freqDumpFile = new File(indexDirectory.getPath() + File.separator + word + "FreqTmp"
+        freqDumpFile = new File(indexDirectory.getPath() + File.separator + word + "FreqTmp" + indexName
                 + Statics.BINARY_FILE_SUFFIX);
         int ioBufferSize = Statics.roundUpToProductOfPairSize(ridToFrequencyMap.size() * Statics.INTEGER_SIZE);
         dosRawRidDumpFile = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(ridDumpFile), ioBufferSize));
@@ -152,7 +158,7 @@ public class InvertedIndex implements WritingMeasurable {
         int lastRid = prevInvertedIndexRid;
         try {
             if (withFile) {
-                lastRid = writeCompressedRidsFromDumpFile(bosOfAllInverted);
+                lastRid = writeCompressedRidsFromDumpFile(bosOfAllInverted, lastRid);
             }
             lastRid = writeCompressedRidsFromInMemory(bosOfAllInverted, lastRid);
         } catch (IOException e) {
@@ -161,15 +167,17 @@ public class InvertedIndex implements WritingMeasurable {
         return lastRid;
     }
 
-    private int writeCompressedRidsFromDumpFile(BufferedOutputStream bosOfAllInverted) throws IOException {
-        int lastRid = 0;
+    private int writeCompressedRidsFromDumpFile(BufferedOutputStream bosOfAllInverted, int lastRid) throws IOException {
+//        int lastRid = 0;
+        int currentRid;
         dosRawRidDumpFile.close(); // close writing before reading
         DataInputStream disRidDumpFile = new DataInputStream(new BufferedInputStream(new FileInputStream(ridDumpFile)));
-        int currentRid = disRidDumpFile.readInt();
-        while (currentRid != -1) { // guaranteed to not be -1 in the first iteration
+        int fileSizeInInts = ((int) ridDumpFile.length() / Statics.INTEGER_SIZE);
+
+        for(int i = 0; i < fileSizeInInts; i++) { // guaranteed to not be -1 in the first iteration
+            currentRid = disRidDumpFile.readInt();
             writeSingleRidToExternalOutput(bosOfAllInverted, currentRid, lastRid);
             lastRid = currentRid;
-            currentRid = disRidDumpFile.readInt();
         }
         disRidDumpFile.close();
         return lastRid;
@@ -217,12 +225,13 @@ public class InvertedIndex implements WritingMeasurable {
     }
 
     private void writeCompressedFrequenciesFromDumpFile(BufferedOutputStream bosOfAllInverted) throws IOException {
+        int freq;
         dosRawFreqDumpFile.close(); // close writing before reading
         DataInputStream disFreqDumpFile = new DataInputStream(new BufferedInputStream(new FileInputStream(freqDumpFile)));
-        int freq = disFreqDumpFile.readInt();
-        while (freq != -1) { // guaranteed to not be -1 in the first iteration
-            writeSingleFrequencyToExternalOutput(bosOfAllInverted, freq);
+        int fileSizeInInts = ((int) freqDumpFile.length() / Statics.INTEGER_SIZE);
+        for(int i = 0; i < fileSizeInInts; i++) { // guaranteed to not be -1 in the first iteration
             freq = disFreqDumpFile.readInt();
+            writeSingleFrequencyToExternalOutput(bosOfAllInverted, freq);
         }
         disFreqDumpFile.close();
     }

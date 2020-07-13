@@ -74,11 +74,11 @@ class SingleIndexReaderQueue{
 
         assert numOfReadBytes == pointerLength;
 
-        TreeMap<Integer, Integer> map = singleIndexReader.getMapFromRawInvertedIndex(rowToReadInto);
-        if(map.isEmpty()){ // could be empty, because of deletion. The method above filter deleted rids.
+        TreeMap<Integer, Integer> ridToFrequencyMap = singleIndexReader.getRidToFreqMapFromRawInvertedIndex(rowToReadInto);
+        if(ridToFrequencyMap.isEmpty()){ // could be empty, because of deletion. The method above filter deleted rids.
             return null;
         } else {
-            return new InvertedIndex(wordToTokenMetaData.getKey(), map, mainIndexDirectory);
+            return new InvertedIndex(wordToTokenMetaData.getKey(), ridToFrequencyMap, mainIndexDirectory, singleIndexReader.getCurrentIndexDirectory());
         }
     }
 

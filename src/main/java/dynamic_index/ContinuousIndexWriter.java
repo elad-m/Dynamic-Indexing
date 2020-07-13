@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -35,16 +36,14 @@ public class ContinuousIndexWriter {
             this.mainIndexDirectory = createDirectory(mainIndexDirectory);
             this.invalidationFile = new File(mainIndexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME);
             invalidationBOS = new BufferedOutputStream(new FileOutputStream(invalidationFile));
-            constructContinuously(inputFile, reviewCounter);
+            constructContinuously(inputFile);
             invalidationBOS.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void constructContinuously(String inputFile, int reviewCounter) {
-        System.out.println("Started continuous construction...");
-        long blockWriterStartTime = System.currentTimeMillis();
+    private void constructContinuously(String inputFile) {
         try {
             BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
             String line = bufferedReaderOfRawInput.readLine();
@@ -57,6 +56,9 @@ public class ContinuousIndexWriter {
                         feedTextToIndexWriter(value); // first stage of sort
                         incrementReviewCounter();
                         invalidationBOS.write(0);
+                        if(reviewCounter % 1000 == 0){
+                            System.out.println(reviewCounter);
+                        }
                     }
                 }
                 line = bufferedReaderOfRawInput.readLine();
@@ -66,7 +68,6 @@ public class ContinuousIndexWriter {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        printElapsedTime(blockWriterStartTime, "First Sort Iteration Time: ");
     }
 
     private void feedTextToIndexWriter(String reviewTextLine) {
@@ -122,6 +123,7 @@ public class ContinuousIndexWriter {
     private class TemporaryIndex {
 
         private final TreeMap<String, InvertedIndex> wordToInvertedIndexMap = new TreeMap<>();
+        private final int TEMPORARY_INDEX_SIZE = 4096;
 
         private void add(String word, int rid) {
             if (wordToInvertedIndexMap.containsKey(word)) {
@@ -130,11 +132,14 @@ public class ContinuousIndexWriter {
                 InvertedIndex invertedIndex = new InvertedIndex(word, rid, mainIndexDirectory);
                 wordToInvertedIndexMap.put(word, invertedIndex);
             }
+//            if(rid == 500){
+//                System.out.println("poor breakpoint");
+//            }
             // this method increases the size below by zero (same word in the same review) or 1
-            int TEMPORARY_INDEX_SIZE = 64;
             if (getQueueSize() == TEMPORARY_INDEX_SIZE) {
                 try {
                     writeTemporaryIndex();
+                    wordToInvertedIndexMap.clear();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -147,26 +152,31 @@ public class ContinuousIndexWriter {
             for (InvertedIndex invertedIndex : wordToInvertedIndexMap.values()) {
                 size += invertedIndex.getSizeByReviews();
             }
+            assert size <= TEMPORARY_INDEX_SIZE;
             return size;
         }
 
         private void writeTemporaryIndex() throws IOException {
-            TreeMap<Integer, File> indexSizeToIndexDirectory = getSizeToFileMap();
+            TreeMap<Integer, File> indexSizeToIndexDirectory = getSizeToIndexDirectoryMap();
             putTempIndexInMap(indexSizeToIndexDirectory);
             int numberOfFirstIndexDirectoriesToMerge = getNumberOfFirstIndexDirectoriesToMerge(indexSizeToIndexDirectory);
 
             if(numberOfFirstIndexDirectoriesToMerge == 1){// just rename Z0 to 0
                 Path z0Path = indexSizeToIndexDirectory.firstEntry().getValue().toPath();
                 Files.move(z0Path, z0Path.resolveSibling("0"));
-            } else if(numberOfFirstIndexDirectoriesToMerge > 1){ // at least two indexes to merge
-                File mergedDirectory = mergeIndexDirectories(indexSizeToIndexDirectory, numberOfFirstIndexDirectoriesToMerge);
-                setInvalidationVector(numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size());
+            } else if(numberOfFirstIndexDirectoriesToMerge > 1){ // at least two indexes to merge including in-memory
+                SortedMap<Integer, File> onlyFilesToMerge = indexSizeToIndexDirectory.headMap(numberOfFirstIndexDirectoriesToMerge);
+                File mergedDirectory = mergeIndexDirectories(onlyFilesToMerge);
+                setInvalidationVectorNotDirty(numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size());
                 renameMergedDirectory(mergedDirectory, numberOfFirstIndexDirectoriesToMerge);
-                (new IndexRemover()).removeFiles(indexSizeToIndexDirectory);
+                (new IndexRemover()).removeFiles(onlyFilesToMerge);
+            } else {
+                // todo
+                assert true;
             }
         }
 
-        private void setInvalidationVector(boolean shouldSetNotDirty) {
+        private void setInvalidationVectorNotDirty(boolean shouldSetNotDirty) {
             // if we are merge all index files, then we don't need to query through the invalidation vector again.
             setInvalidationVectorIsDirty(!shouldSetNotDirty);
         }
@@ -180,10 +190,9 @@ public class ContinuousIndexWriter {
                     mergedPath.resolveSibling(newDirName));
         }
 
-        private File mergeIndexDirectories(TreeMap<Integer, File> sizeToFile, int numberOfFirstIndexDirectoriesToMerge) {
+        private File mergeIndexDirectories(SortedMap<Integer, File> sizeToFilesToMerge) {
             IndexReader indexReader = new IndexReader(mainIndexDirectory.getAbsolutePath(),
-                    sizeToFile.values(),
-                    numberOfFirstIndexDirectoriesToMerge);
+                    sizeToFilesToMerge.values());
             IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModeratorLogMerge();
             IndexMergeWriter indexMergeWriter = new IndexMergeWriter(mainIndexDirectory.getAbsolutePath());
             return indexMergeWriter.merge(indexMergingModerator);
@@ -196,16 +205,16 @@ public class ContinuousIndexWriter {
             sizeToFile.put(0, tempIndexDirectory);
         }
 
-        private TreeMap<Integer, File> getSizeToFileMap() {
-            TreeMap<Integer, File> map = new TreeMap<>();
+        private TreeMap<Integer, File> getSizeToIndexDirectoryMap() {
+            TreeMap<Integer, File> sizeToIndexDirectory = new TreeMap<>();
             File[] directories = mainIndexDirectory.listFiles(File::isDirectory);
             assert directories != null;
             for(File directory: directories){
                 int dirSize = getDirectorySizeFromName(directory);
-                map.put(dirSize + 1, directory); // why + 1? because whatever else I tried something still doesn't make
+                sizeToIndexDirectory.put(dirSize + 1, directory); // why + 1? because whatever else I tried something still doesn't make
                 // sense entirely.
             }
-            return map;
+            return sizeToIndexDirectory;
         }
 
         private int getNumberOfFirstIndexDirectoriesToMerge(TreeMap<Integer, File> sizeToFile) {

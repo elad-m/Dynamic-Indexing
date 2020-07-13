@@ -43,9 +43,9 @@ public class IndexMergeWriter {
         instantiateIndexFiles();
         Map.Entry<String, InvertedIndex> currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
         while (currentWordAndInverted != null) {
-            insertToMap(currentWordAndInverted);
-            if (isMapSizeEqualToSizeOfFrontCodeBlock())
+            if (shouldWriteMap(currentWordAndInverted.getKey()))
                 writeAndReset();
+            insertToMap(currentWordAndInverted);// will not increase the number of word in the map
             currentWordAndInverted = indexMergingModerator.getNextMergingWordAndIndex();
         }
         writeRemainderAndClose();
@@ -110,8 +110,10 @@ public class IndexMergeWriter {
         allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
     }
 
-    private boolean isMapSizeEqualToSizeOfFrontCodeBlock(){
-        return wordToInvertedIndexMergerMap.size() % numOfTokensInFrontCodeBlock == 0;
+    private boolean shouldWriteMap(String currentWord){
+        // if we have 8 words and the next word is new
+        return !wordToInvertedIndexMergerMap.containsKey(currentWord) &&
+                wordToInvertedIndexMergerMap.size() == numOfTokensInFrontCodeBlock;
     }
 
     private void writeAndReset(){
@@ -125,7 +127,7 @@ public class IndexMergeWriter {
         if(wordToInvertedIndexMergerMap.containsKey(currentWord)){
             wordToInvertedIndexMergerMap.get(currentWord).put(currentInverted);
         } else {
-            InvertedIndexesToMerge invertedIndexesToMerge = new InvertedIndexesToMerge();
+            InvertedIndexesToMerge invertedIndexesToMerge = new InvertedIndexesToMerge(currentWord);
             invertedIndexesToMerge.put(currentInverted);
             wordToInvertedIndexMergerMap.put(currentWord, invertedIndexesToMerge);
         }

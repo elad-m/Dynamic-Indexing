@@ -209,7 +209,7 @@ public final class Statics {
     public static File createDirectory(String dir) {
         File directory = new File(dir);
         if (!directory.mkdir()) {
-            System.out.format("Directory %s already exists.", dir);
+            System.out.format("Directory %s already exists." + System.lineSeparator(), dir);
         }
         return directory;
     }
@@ -224,7 +224,7 @@ public final class Statics {
         TreeMap<String, Integer> orderedTermMapping = new TreeMap<>(wordTermToTermID);
         try {
             FileWriter fw = new FileWriter(indexDirectory.getPath() + File.separator
-                    + mappingType + TERM_MAP_FILE_DEBUG);
+                    + mappingType + TERM_MAP_FILE_DEBUG, true);
             for (Map.Entry<String, Integer> entry : orderedTermMapping.entrySet()) {
                 fw.write(entry.getKey());
                 fw.write(' ');
