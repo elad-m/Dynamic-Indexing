@@ -1,6 +1,6 @@
 package dynamic_index.index_writing;
 
-import dynamic_index.Statics;
+import dynamic_index.global_util.MiscUtils;
 import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_structure.FrontCodeBlock;
 import dynamic_index.index_structure.InvertedIndex;
@@ -18,7 +18,7 @@ import java.util.TreeMap;
 public class IndexMergeWriter {
 
     private final File mergedIndexDirectory;
-    private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
+    private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(MiscUtils.STRING_BUILDER_DEFAULT_CAPACITY);
     private int numOfCharactersWrittenInSuffixFile = 0;
     private int numOfBytesWrittenInInvertedIndexFile = 0;
 
@@ -34,9 +34,9 @@ public class IndexMergeWriter {
      * @param allIndexesDirectory - the directory in which to merge all indexes.
      */
     public IndexMergeWriter(String allIndexesDirectory) {
-        this.mergedIndexDirectory = Statics.createDirectory(allIndexesDirectory
+        this.mergedIndexDirectory = MiscUtils.createDirectory(allIndexesDirectory
                 + File.separator
-                + Statics.MERGED_INDEX_DIRECTORY);
+                + MiscUtils.MERGED_INDEX_DIRECTORY);
     }
 
     public File merge(IndexMergingModerator indexMergingModerator) {
@@ -53,9 +53,9 @@ public class IndexMergeWriter {
     }
 
     private void instantiateIndexFiles() {
-        File frontCodedFile = new File(mergedIndexDirectory + File.separator + Statics.WORDS_FRONT_CODED_FILENAME);
-        File invIndexFile = new File(mergedIndexDirectory + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
-        File stringConcatFile = new File(mergedIndexDirectory + File.separator + Statics.WORDS_CONCAT_FILENAME);
+        File frontCodedFile = new File(mergedIndexDirectory + File.separator + MiscUtils.WORDS_FRONT_CODED_FILENAME);
+        File invIndexFile = new File(mergedIndexDirectory + File.separator + MiscUtils.WORDS_INVERTED_INDEX_FILENAME);
+        File stringConcatFile = new File(mergedIndexDirectory + File.separator + MiscUtils.WORDS_CONCAT_FILENAME);
         try {
             if (frontCodedFile.createNewFile()
                     && invIndexFile.createNewFile()
@@ -107,7 +107,7 @@ public class IndexMergeWriter {
 
     private void resetIteration() {
         wordToInvertedIndexMergerMap.clear();
-        allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
+        allWordsSuffixConcatInBlock = new StringBuilder(MiscUtils.STRING_BUILDER_DEFAULT_CAPACITY);
     }
 
     private boolean shouldWriteMap(String currentWord){

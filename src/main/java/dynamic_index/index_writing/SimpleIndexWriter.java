@@ -1,6 +1,6 @@
 package dynamic_index.index_writing;
 
-import dynamic_index.Statics;
+import dynamic_index.global_util.MiscUtils;
 import dynamic_index.index_structure.FrontCodeBlock;
 import dynamic_index.index_structure.InvertedIndex;
 
@@ -16,7 +16,7 @@ public class SimpleIndexWriter {
 
     private final File indexOutputDirectory;
 
-    private final StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(Statics.STRING_BUILDER_DEFAULT_CAPACITY);
+    private final StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(MiscUtils.STRING_BUILDER_DEFAULT_CAPACITY);
     private int numOfCharactersWrittenInSuffixFile = 0;
     private int numOfBytesWrittenInInvertedIndexFile = 0;
 
@@ -36,9 +36,9 @@ public class SimpleIndexWriter {
     }
 
     private void instantiateIndexFiles() {
-        File frontCodedFile = new File(indexOutputDirectory + File.separator + Statics.WORDS_FRONT_CODED_FILENAME);
-        File invIndexFile = new File(indexOutputDirectory + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
-        File stringConcatFile = new File(indexOutputDirectory + File.separator + Statics.WORDS_CONCAT_FILENAME);
+        File frontCodedFile = new File(indexOutputDirectory + File.separator + MiscUtils.WORDS_FRONT_CODED_FILENAME);
+        File invIndexFile = new File(indexOutputDirectory + File.separator + MiscUtils.WORDS_INVERTED_INDEX_FILENAME);
+        File stringConcatFile = new File(indexOutputDirectory + File.separator + MiscUtils.WORDS_CONCAT_FILENAME);
         try {
             if (frontCodedFile.createNewFile()
                     && invIndexFile.createNewFile()

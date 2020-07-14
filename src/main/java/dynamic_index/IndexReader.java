@@ -1,8 +1,8 @@
 package dynamic_index;
 
+import dynamic_index.global_util.MiscUtils;
 import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_reading.SingleIndexReader;
-import dynamic_index.index_structure.InvertedIndex;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -23,7 +23,6 @@ public class IndexReader {
     private byte[] mainIndexDictionary;
     private byte[] mainConcatString;
     private int mainNumOfWordsInFrontCodeBlock;
-    private File invalidationVector;
 
     // auxiliary index data
     private int numOfSubIndexes = 0;
@@ -74,7 +73,6 @@ public class IndexReader {
                 loadSingleSubIndex(indexDir, i);
                 i++;
             }
-            instantiateInvalidationVector();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -107,11 +105,11 @@ public class IndexReader {
 
     private void loadSingleSubIndex(File auxIndexDirectory, int index_i) throws IOException {
         File auxDictionaryFile = new File(auxIndexDirectory.getPath()
-                + File.separator + Statics.WORDS_FRONT_CODED_FILENAME);
+                + File.separator + MiscUtils.WORDS_FRONT_CODED_FILENAME);
         File auxStringConcatFile = new File(auxIndexDirectory.getPath()
-                + File.separator + Statics.WORDS_CONCAT_FILENAME);
+                + File.separator + MiscUtils.WORDS_CONCAT_FILENAME);
         File auxInvertedIndexFile = new File(auxIndexDirectory.getPath()
-                + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
+                + File.separator + MiscUtils.WORDS_INVERTED_INDEX_FILENAME);
 
         assert auxDictionaryFile.exists() && auxStringConcatFile.exists() && auxInvertedIndexFile.exists();
 
@@ -122,33 +120,28 @@ public class IndexReader {
     }
 
     private void loadAuxNumOfTokensPerBlock(File indexDirectory, int index_i) {
-        subNumOfWordsInFrontCodeBlock[index_i] = Statics.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
+        subNumOfWordsInFrontCodeBlock[index_i] = MiscUtils.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
     }
 
     private void loadMainIndex() throws IOException {
         File mainDictionaryFile = new File(mainIndexDirectory.getPath()
-                + File.separator + Statics.WORDS_FRONT_CODED_FILENAME);
+                + File.separator + MiscUtils.WORDS_FRONT_CODED_FILENAME);
         File mainStringConcatFile = new File(mainIndexDirectory.getPath()
-                + File.separator + Statics.WORDS_CONCAT_FILENAME);
+                + File.separator + MiscUtils.WORDS_CONCAT_FILENAME);
         mainInvertedIndexFile = new File(mainIndexDirectory.getPath()
-                + File.separator + Statics.WORDS_INVERTED_INDEX_FILENAME);
-        instantiateInvalidationVector();
+                + File.separator + MiscUtils.WORDS_INVERTED_INDEX_FILENAME);
 
         assert mainDictionaryFile.exists() && mainStringConcatFile.exists()
-                && mainInvertedIndexFile.exists() && invalidationVector.exists();
+                && mainInvertedIndexFile.exists();
 
         mainIndexDictionary = Files.readAllBytes(mainDictionaryFile.toPath());
         mainConcatString = Files.readAllBytes(mainStringConcatFile.toPath());
         loadMainNumOfTokensPerBlock();
     }
 
-    private void instantiateInvalidationVector(){
-        invalidationVector = new File(mainIndexDirectory.getPath()
-                + File.separator + Statics.INVALIDATION_VECTOR_FILENAME);
-    }
 
     private void loadMainNumOfTokensPerBlock() {
-        mainNumOfWordsInFrontCodeBlock = Statics.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
+        mainNumOfWordsInFrontCodeBlock = MiscUtils.BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
     }
 
 
@@ -189,7 +182,6 @@ public class IndexReader {
             singleIndexReader = new SingleIndexReader(subIndexesDictionary[i],
                     subIndexesConcatString[i],
                     subInvertedIndexFiles[i],
-                    invalidationVector,
                     subNumOfWordsInFrontCodeBlock[i],
                     mainIndexDirectory);
             TreeMap<Integer, Integer> auxResults = singleIndexReader.getReviewsWithWord(token);
@@ -202,7 +194,6 @@ public class IndexReader {
                 new SingleIndexReader(mainIndexDictionary,
                         mainConcatString,
                         mainInvertedIndexFile,
-                        invalidationVector,
                         mainNumOfWordsInFrontCodeBlock, mainIndexDirectory);
         TreeMap<Integer, Integer> mainResults = singleIndexReader.getReviewsWithWord(token);
         unionOfResults.putAll(mainResults);
@@ -226,7 +217,10 @@ public class IndexReader {
 
         // adding main index
         SingleIndexReader singleIndexReader = new SingleIndexReader(mainIndexDictionary,
-                mainConcatString, mainInvertedIndexFile, invalidationVector,mainNumOfWordsInFrontCodeBlock, mainIndexDirectory);
+                mainConcatString,
+                mainInvertedIndexFile,
+                mainNumOfWordsInFrontCodeBlock,
+                mainIndexDirectory);
         indexMergingModerator.add(singleIndexReader);
 
         // adding auxiliary indexes
@@ -240,7 +234,6 @@ public class IndexReader {
             SingleIndexReader singleIndexReader = new SingleIndexReader(subIndexesDictionary[i],
                     subIndexesConcatString[i],
                     subInvertedIndexFiles[i],
-                    invalidationVector,
                     subNumOfWordsInFrontCodeBlock[i],
                     mainIndexDirectory);
             singleIndexReaders.add(singleIndexReader);

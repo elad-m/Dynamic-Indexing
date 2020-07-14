@@ -2,6 +2,8 @@ package dynamic_index;
 
 import dynamic_index.external_sort.ExternalMergeSort;
 import dynamic_index.external_sort.TermToReviewBlockWriter;
+import dynamic_index.global_util.IndexInvalidationUtil;
+import dynamic_index.global_util.PrintingUtil;
 import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_writing.IndexMergeWriter;
 import dynamic_index.index_writing.ExternalIndexWriter;
@@ -11,11 +13,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-import static dynamic_index.Statics.*;
+import static dynamic_index.global_util.MiscUtils.*;
 
 public class IndexWriter {
 
-    private final String mainIndexDirectory;
+    private final String allIndexesDirectory;
     private File currentIndexDirectory;
 
     private ExternalIndexWriter wordsDataIndexWriter;
@@ -30,7 +32,7 @@ public class IndexWriter {
 //    private final boolean SKIP_SORTING = false; // when true, the next two are unused
 
     public IndexWriter(String indexDirectory, int inputScaleType) {
-        this.mainIndexDirectory = indexDirectory;
+        this.allIndexesDirectory = indexDirectory;
         this.inputScaleType = inputScaleType;
     }
 
@@ -96,8 +98,8 @@ public class IndexWriter {
 
     private void writeHashmapFor100Random() {
         // adds to the same file at the main directory
-        File mainIndexDirFile = new File(mainIndexDirectory);
-        writeHashmapToFile(wordTermToTermID, mainIndexDirFile, WORDS_MAPPING, inputScaleType);
+        File mainIndexDirFile = new File(allIndexesDirectory);
+        writeMapToFile(wordTermToTermID, mainIndexDirFile, WORDS_MAPPING, inputScaleType);
     }
 
     private void constructTermToTermIDMapping(String inputFile) throws IOException {
@@ -131,7 +133,7 @@ public class IndexWriter {
         bufferedReaderOfRawInput.close();
         System.out.println("token counter: " + tokenCounter);
         System.out.format("wordTerms.size(): %d\n", wordTerms.size());
-        printElapsedTime(startTime, "Building set of words");
+        PrintingUtil.printElapsedTime(startTime, "Building set of words");
         return wordTerms;
     }
 
@@ -149,7 +151,7 @@ public class IndexWriter {
         File mergeFilesDirectory = wordsTermToReviewBlockWriter.getMergeFilesDirectory();
         int blockSizeInPairs = wordsTermToReviewBlockWriter.getBLOCK_SIZE_IN_INT_PAIRS();
         new ExternalMergeSort(currentIndexDirectory, mergeFilesDirectory, blockSizeInPairs);
-        printElapsedTime(startTime, "Words Sort Merging");
+        PrintingUtil.printElapsedTime(startTime, "Words Sort Merging");
     }
 
     private void firstSortIteration(String inputFile, int initialReviewCounter) throws IOException {
@@ -175,7 +177,7 @@ public class IndexWriter {
         //closing first iteration
         bufferedReaderOfRawInput.close();
         wordsTermToReviewBlockWriter.closeWriter();
-        printElapsedTime(blockWriterStartTime, "First Sort Iteration Time: ");
+        PrintingUtil.printElapsedTime(blockWriterStartTime, "First Sort Iteration Time: ");
     }
 
     private void feedTextToBlockWriter(String reviewTextLine) {
@@ -209,7 +211,7 @@ public class IndexWriter {
 
 //        if (!SKIP_SORTING)
 //            writeMetaData();
-        writeToInvalidationVector(mainIndexDirectory, initialReviewCounter, reviewCounter);
+//        writeToInvalidationVector(mainIndexDirectory, initialReviewCounter, reviewCounter);
         deleteSortedFile(currentIndexDirectory);
     }
 
@@ -241,7 +243,7 @@ public class IndexWriter {
      * @param ridsToDelete - review ids to delete. If not in range, will ignore.
      */
     public void removeReviews(String indexDirectory, int[] ridsToDelete) {
-        markInvalidationVector(indexDirectory, ridsToDelete);
+        IndexInvalidationUtil.addToInvalidationFile(indexDirectory, ridsToDelete);
     }
 
     /**
@@ -252,16 +254,20 @@ public class IndexWriter {
         // reading rows of all indexes
         IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModeratorRegularMerge();
         // makes each row read from the moderator written as one index.
-        IndexMergeWriter indexMergeWriter = new IndexMergeWriter(mainIndexDirectory);
+        IndexMergeWriter indexMergeWriter = new IndexMergeWriter(allIndexesDirectory);
         File mergedDirectory = indexMergeWriter.merge(indexMergingModerator);
-        setInvalidationVectorIsDirty(false);
+        emptyInvalidationFile();
         IndexRemover indexRemover = new IndexRemover();
-        indexRemover.removeFilesAfterMerge(mainIndexDirectory);
+        indexRemover.removeFilesAfterMerge(allIndexesDirectory);
         moveMergedFilesToMainIndex(mergedDirectory);
     }
 
+    private void emptyInvalidationFile() {
+        IndexInvalidationUtil.emptyInvalidationFile(allIndexesDirectory);
+    }
+
     private void moveMergedFilesToMainIndex(File mergedDirectory){
-        Path mainDirectory = (new File(mainIndexDirectory)).toPath();
+        Path mainDirectory = (new File(allIndexesDirectory)).toPath();
         try {
             File[] mergedIndexFiles = mergedDirectory.listFiles();
             if(mergedIndexFiles != null){

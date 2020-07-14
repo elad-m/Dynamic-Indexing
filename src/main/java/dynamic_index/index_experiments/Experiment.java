@@ -1,4 +1,4 @@
-package dynamic_index.runExperiment;
+package dynamic_index.index_experiments;
 
 import dynamic_index.IndexRemover;
 import dynamic_index.ScalingCases;
@@ -14,13 +14,13 @@ abstract public class Experiment {
     final String AUXILIARY_INDEX_DIR_PATTERN = "aux";
     public PrintWriter tlog = null;
     public int inputScale = 1;
-    final String indexDirectory;
+    final String allIndexesDirectory;
     final String indexParentDirectory;
     final ScalingCases scalingCases;
 
     public Experiment(String localDir, String indexDirectoryName, int inputScale, boolean logMergeType){
         this.indexParentDirectory = localDir;
-        this.indexDirectory = indexDirectoryName;
+        this.allIndexesDirectory = indexDirectoryName;
         this.inputScale = inputScale;
         this.scalingCases = new ScalingCases(this.inputScale, logMergeType);
     }
@@ -30,7 +30,7 @@ abstract public class Experiment {
     public abstract void runExperiment();
 
     protected String getAuxiliaryIndexDirPattern(int num) {
-        return indexDirectory + File.separator + AUXILIARY_INDEX_DIR_PATTERN + num;
+        return allIndexesDirectory + File.separator + AUXILIARY_INDEX_DIR_PATTERN + num;
     }
 
     private void removeIndex(String indexDirectoryName) {
@@ -55,7 +55,7 @@ abstract public class Experiment {
 
     protected void createTestLog(String experimentType) {
         try {
-            File indexDirectoryFile = new File(this.indexDirectory);
+            File indexDirectoryFile = new File(this.allIndexesDirectory);
             File testLogFile = new File(indexDirectoryFile.getParent() + File.separator + "0TESTLOG.txt");
             tlog = new PrintWriter(new BufferedWriter(new FileWriter(testLogFile, true)), true);
         } catch (IOException e) {

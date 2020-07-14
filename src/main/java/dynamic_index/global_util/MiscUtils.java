@@ -1,4 +1,4 @@
-package dynamic_index;
+package dynamic_index.global_util;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("SpellCheckingInspection")
-public final class Statics {
+public final class MiscUtils {
 
     public static final int BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK = 8;
     public static final int WORDS_DEFAULT_MAX_TEMP_FILES = 1024;
@@ -27,7 +27,7 @@ public final class Statics {
 //    public static final String MAIN_INDEX_META_DATA_FILENAME = "indexMetaData.bin";
 //    public static final String ALL_INDEXES_META_DATA_FILENAME = "allIndexesMetaData.bin";
 
-    public static final String INVALIDATION_VECTOR_FILENAME = "invalidationVector.bin";
+    public static final String INVALIDATION_FILENAME = "invalidation.bin";
 
     public static final String MERGE_FILES_DIRECTORY_NAME = "mergeFilesDirectory";
     public static final String WORDS_SORTED_FILE_NAME = "WORDS_SORTED.bin";
@@ -40,40 +40,6 @@ public final class Statics {
     public static final String INDEXES_DIR_NAME = "indexes";
     public static final String LOG_MERGE_INDEXES_DIR_NAME = "logMergeIndexes";
 
-
-    private static boolean invalidationVectorIsDirty = false;
-
-    //=========================  Printing  =====================================//
-
-    public static void printElapsedTime(long startTime, String methodName) {
-        long endTime = System.currentTimeMillis();
-        long elapsedTimeMilliSeconds = endTime - startTime;
-        long elapsedTimeSeconds = elapsedTimeMilliSeconds / 1000;
-        long elapsedTimeMinutes = elapsedTimeSeconds / 60;
-        System.out.format("Elapsed time for %s: %d in mins, %d in secs, %d in ms\n",
-                methodName,
-                elapsedTimeMinutes,
-                elapsedTimeSeconds,
-                elapsedTimeMilliSeconds);
-    }
-
-    public static void printElapsedTimeToLog(PrintWriter tlog, long startTime, String methodName) {
-        long endTime = System.currentTimeMillis();
-        long elapsedTimeMilliSeconds = endTime - startTime;
-        long elapsedTimeSeconds = elapsedTimeMilliSeconds / 1000;
-        long elapsedTimeMinutes = elapsedTimeSeconds / 60;
-        System.out.format("Elapsed time for %s: %d in mins, %d in secs, %d in ms\n",
-                methodName,
-                elapsedTimeMinutes,
-                elapsedTimeSeconds,
-                elapsedTimeMilliSeconds);
-
-        tlog.format("Elapsed time for %s: %d in mins, %d in secs, %d in ms\n",
-                methodName,
-                elapsedTimeMinutes,
-                elapsedTimeSeconds,
-                elapsedTimeMilliSeconds);
-    }
 
     //====================================  Sizes  =====================================//
 
@@ -91,7 +57,7 @@ public final class Statics {
     }
 
     public static int estimateBestSizeOfWordsBlocks(final long numOfTokens, final boolean withFreeMemory) {
-        long estimatedSizeOfFile = numOfTokens * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
+        long estimatedSizeOfFile = numOfTokens * MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES;
         long blockSize = calculateSizeOfBlock(estimatedSizeOfFile); // IN BYTES
         long blockSizeInPairs = blockSize / 8;
         System.out.println("blockSize in BYTES:" + blockSize);
@@ -101,8 +67,8 @@ public final class Statics {
     }
 
     private static long calculateSizeOfBlock(final long sizeOfFile) {
-        long baseSizeOfBlock = (long) Math.ceil((double) sizeOfFile / Statics.WORDS_DEFAULT_MAX_TEMP_FILES);
-        return Statics.roundUpToProductOfPairSize(baseSizeOfBlock);
+        long baseSizeOfBlock = (long) Math.ceil((double) sizeOfFile / MiscUtils.WORDS_DEFAULT_MAX_TEMP_FILES);
+        return MiscUtils.roundUpToProductOfPairSize(baseSizeOfBlock);
     }
 
     public static int roundUpToProductOfPairSize(long blockSize) {
@@ -129,65 +95,10 @@ public final class Statics {
         return swapped;
     }
 
-
     public static void deleteSortedFile(File indexDirectory) throws IOException {
         File wordsSortedFile = new File(indexDirectory + File.separator
-                + Statics.WORDS_SORTED_FILE_NAME);
+                + MiscUtils.WORDS_SORTED_FILE_NAME);
         Files.delete(wordsSortedFile.toPath());
-    }
-
-    //=========================  invalidation vector  =====================================//
-
-    public static boolean isInvalidationVectorIsDirty() {
-        return invalidationVectorIsDirty;
-    }
-
-    public static void setInvalidationVectorIsDirty(boolean invalidationVectorIsDirty) {
-        Statics.invalidationVectorIsDirty = invalidationVectorIsDirty;
-    }
-
-    public static void markInvalidationVector(String indexDirectory, int[] ridsToDelete){
-        try{
-            RandomAccessFile raValidationVectorFile = new RandomAccessFile(
-                    indexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
-            for(int rid: ridsToDelete){
-                raValidationVectorFile.seek(rid - 1);
-                raValidationVectorFile.writeByte(1);
-            }
-            setInvalidationVectorIsDirty(true);
-            raValidationVectorFile.close();
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
-
-    public static void writeToInvalidationVector(String mainIndexPath, int initialReviewCounter, int reviewCounter) throws IOException {
-        int numberOfReviewsAdded = reviewCounter - initialReviewCounter;
-        RandomAccessFile raValidationVectorFile = new RandomAccessFile(
-                mainIndexPath + File.separator + INVALIDATION_VECTOR_FILENAME, "rw");
-        raValidationVectorFile.seek(initialReviewCounter);
-        for(int i = 0; i < numberOfReviewsAdded; i++){
-            raValidationVectorFile.writeByte(0);
-        }
-        raValidationVectorFile.close();
-    }
-
-    public static void filterResults(File invalidationVector, TreeMap<Integer, Integer> unfilteredResults){
-        try{
-            RandomAccessFile raToInvalidationVector = new RandomAccessFile(invalidationVector, "r");
-            int byteRead;
-            for(Iterator<Map.Entry<Integer, Integer>> it = unfilteredResults.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<Integer, Integer> entry = it.next();
-                raToInvalidationVector.seek(entry.getKey() - 1); // byte zero holds rid=1
-                byteRead = raToInvalidationVector.read();
-                if(byteRead == 1){
-                    it.remove();
-                }
-            }
-            raToInvalidationVector.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     //===============================  Misc  =====================================//
@@ -216,10 +127,10 @@ public final class Statics {
 
     //=========================  Writing for Meta and Testing  =====================================//
 
-    public static void writeHashmapToFile(Map<String, Integer> wordTermToTermID,
-                                          File indexDirectory,
-                                          String mappingType,
-                                          int inputScaleType) {
+    public static void writeMapToFile(Map<String, Integer> wordTermToTermID,
+                                      File indexDirectory,
+                                      String mappingType,
+                                      int inputScaleType) {
         System.out.println("writing hashmap...");
         TreeMap<String, Integer> orderedTermMapping = new TreeMap<>(wordTermToTermID);
         try {

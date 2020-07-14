@@ -1,6 +1,6 @@
 package dynamic_index.external_sort;
 
-import dynamic_index.Statics;
+import dynamic_index.global_util.MiscUtils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -28,7 +28,7 @@ public class ExternalMergeIteration {
         this.numOfFilesToMergeToOneFile = Math.max(2, (int)Math.ceil(Math.sqrt(numOfMergeFiles)));
         this.mergeFilesToRead =  mergeFiles;
         this.mergeFilesQueues = new ArrayList<>();
-        this.BLOCK_SIZE_IN_INT_PAIRS = Statics.roundUpToProductOfPairSize(blockSizeInPairs / numOfMergeFiles);
+        this.BLOCK_SIZE_IN_INT_PAIRS = MiscUtils.roundUpToProductOfPairSize(blockSizeInPairs / numOfMergeFiles);
         System.out.println("BLOCK SIZE IN PAIRS:" + BLOCK_SIZE_IN_INT_PAIRS +
                 " IN ITERATION: " + iterationNumber);
         this.outputBlockWriter =
@@ -168,7 +168,7 @@ public class ExternalMergeIteration {
             ByteBuffer blockByteBuffer = getByteBuffer();
             for (int i = 0; i < BLOCK_SIZE_IN_PAIRS; i++) {
                 /* there will be bad zeros at the last block of the file */
-                if (blockByteBuffer.getInt(i * Statics.PAIR_OF_INT_SIZE_IN_BYTES) == 0){
+                if (blockByteBuffer.getInt(i * MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES) == 0){
                     break; // possibly hides other reasons for zeros...
                 }
                 int tid = blockByteBuffer.getInt();
@@ -186,7 +186,7 @@ public class ExternalMergeIteration {
         }
 
         private ByteBuffer getByteBuffer() {
-            final int blockSizeInBytes = this.BLOCK_SIZE_IN_PAIRS * Statics.PAIR_OF_INT_SIZE_IN_BYTES;
+            final int blockSizeInBytes = this.BLOCK_SIZE_IN_PAIRS * MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES;
             byte[] blockFromFile = new byte[blockSizeInBytes];
             try {
                 int numOfBytesRead = inputFileBuffer.read(blockFromFile);
@@ -228,8 +228,8 @@ public class ExternalMergeIteration {
 
         private void createMergeFileDirectory(String indexDirectoryName) {
             final String TEMP_FILE_STORE = indexDirectoryName + File.separator +
-                    Statics.MERGE_FILES_DIRECTORY_NAME + iterationNumber;
-            this.mergeFilesDirectory = Statics.createDirectory(TEMP_FILE_STORE);
+                    MiscUtils.MERGE_FILES_DIRECTORY_NAME + iterationNumber;
+            this.mergeFilesDirectory = MiscUtils.createDirectory(TEMP_FILE_STORE);
         }
 
         File getMergeFilesDirectory(){
@@ -237,7 +237,7 @@ public class ExternalMergeIteration {
         }
 
         void createNewFile() {
-            final String BINARY_FILE_SUFFIX = Statics.BINARY_FILE_SUFFIX;
+            final String BINARY_FILE_SUFFIX = MiscUtils.BINARY_FILE_SUFFIX;
             final String FILE_NAME_PATTERN = "outputIteration";
             String newFileName = mergeFilesDirectory.getPath() + File.separator
                     + FILE_NAME_PATTERN + iterationNumber + "-"
@@ -245,7 +245,7 @@ public class ExternalMergeIteration {
             countNewFile(); // yes, counting after taking the name
             try {
                 currentFile = new BufferedOutputStream(new FileOutputStream(newFileName),
-                        BLOCK_SIZE_IN_INT_PAIRS*Statics.PAIR_OF_INT_SIZE_IN_BYTES);
+                        BLOCK_SIZE_IN_INT_PAIRS* MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }

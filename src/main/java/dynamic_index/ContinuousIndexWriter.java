@@ -1,5 +1,6 @@
 package dynamic_index;
 
+import dynamic_index.global_util.IndexInvalidationUtil;
 import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_structure.InvertedIndex;
 import dynamic_index.index_writing.IndexMergeWriter;
@@ -14,15 +15,13 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import static dynamic_index.Statics.*;
+import static dynamic_index.global_util.MiscUtils.*;
 
 public class ContinuousIndexWriter {
 
     private final TemporaryIndex temporaryIndex;
 
-    private File mainIndexDirectory;
-    private File invalidationFile;
-    private BufferedOutputStream invalidationBOS;
+    private File allIndexesDirectory;
 
     private int reviewCounter = 1; // not necessarily the number of reviews in index in practice because deletion
     private int tokenCounter = 0; // token counter only incremented in the mapping stage
@@ -32,15 +31,8 @@ public class ContinuousIndexWriter {
     }
 
     public void construct(String inputFile, String mainIndexDirectory) {
-        try {
-            this.mainIndexDirectory = createDirectory(mainIndexDirectory);
-            this.invalidationFile = new File(mainIndexDirectory + File.separator + INVALIDATION_VECTOR_FILENAME);
-            invalidationBOS = new BufferedOutputStream(new FileOutputStream(invalidationFile));
-            constructContinuously(inputFile);
-            invalidationBOS.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.allIndexesDirectory = createDirectory(mainIndexDirectory);
+        constructContinuously(inputFile);
     }
 
     private void constructContinuously(String inputFile) {
@@ -55,7 +47,6 @@ public class ContinuousIndexWriter {
                     if (field.equals(REVIEW_TEXT_FIELD)) {
                         feedTextToIndexWriter(value); // first stage of sort
                         incrementReviewCounter();
-                        invalidationBOS.write(0);
                         if(reviewCounter % 1000 == 0){
                             System.out.println(reviewCounter);
                         }
@@ -63,7 +54,7 @@ public class ContinuousIndexWriter {
                 }
                 line = bufferedReaderOfRawInput.readLine();
             }
-            writeToInvalidationVector(mainIndexDirectory.getAbsolutePath(), 0, reviewCounter);
+//            writeToInvalidationVector(mainIndexDirectory.getAbsolutePath(), 0, reviewCounter);
             bufferedReaderOfRawInput.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -91,7 +82,7 @@ public class ContinuousIndexWriter {
      * @param ridsToDelete - review ids to delete. If not in range, will ignore.
      */
     public void removeReviews(String indexDirectory, int[] ridsToDelete) {
-        markInvalidationVector(indexDirectory, ridsToDelete);
+        IndexInvalidationUtil.addToInvalidationFile(indexDirectory, ridsToDelete);
     }
 
     TreeMap<Integer, Integer> getReviewsWithToken(String token) {
@@ -102,7 +93,7 @@ public class ContinuousIndexWriter {
         } else {
             assert !invertedIndex.isWithFile();
             ridToFrequencies = invertedIndex.getRidToFrequencyMap();
-            filterResults(invalidationFile, ridToFrequencies);
+            IndexInvalidationUtil.filterResults(allIndexesDirectory.getAbsolutePath(), ridToFrequencies);
         }
         return ridToFrequencies;
     }
@@ -129,7 +120,7 @@ public class ContinuousIndexWriter {
             if (wordToInvertedIndexMap.containsKey(word)) {
                 wordToInvertedIndexMap.get(word).put(rid);
             } else {
-                InvertedIndex invertedIndex = new InvertedIndex(word, rid, mainIndexDirectory);
+                InvertedIndex invertedIndex = new InvertedIndex(word, rid, allIndexesDirectory);
                 wordToInvertedIndexMap.put(word, invertedIndex);
             }
 //            if(rid == 500){
@@ -167,7 +158,7 @@ public class ContinuousIndexWriter {
             } else if(numberOfFirstIndexDirectoriesToMerge > 1){ // at least two indexes to merge including in-memory
                 SortedMap<Integer, File> onlyFilesToMerge = indexSizeToIndexDirectory.headMap(numberOfFirstIndexDirectoriesToMerge);
                 File mergedDirectory = mergeIndexDirectories(onlyFilesToMerge);
-                setInvalidationVectorNotDirty(numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size());
+                emptyInvalidationFileIfNeeded(numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size());
                 renameMergedDirectory(mergedDirectory, numberOfFirstIndexDirectoriesToMerge);
                 (new IndexRemover()).removeFiles(onlyFilesToMerge);
             } else {
@@ -176,9 +167,11 @@ public class ContinuousIndexWriter {
             }
         }
 
-        private void setInvalidationVectorNotDirty(boolean shouldSetNotDirty) {
-            // if we are merge all index files, then we don't need to query through the invalidation vector again.
-            setInvalidationVectorIsDirty(!shouldSetNotDirty);
+        private void emptyInvalidationFileIfNeeded(boolean shouldSetNotDirty) {
+            // if we are merge all index files, then we don't need to the invalidation vector again.
+            if(shouldSetNotDirty){
+                IndexInvalidationUtil.emptyInvalidationFile(allIndexesDirectory.getAbsolutePath());
+            }
         }
 
         private void renameMergedDirectory(File mergedDirectory,
@@ -191,15 +184,15 @@ public class ContinuousIndexWriter {
         }
 
         private File mergeIndexDirectories(SortedMap<Integer, File> sizeToFilesToMerge) {
-            IndexReader indexReader = new IndexReader(mainIndexDirectory.getAbsolutePath(),
+            IndexReader indexReader = new IndexReader(allIndexesDirectory.getAbsolutePath(),
                     sizeToFilesToMerge.values());
             IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModeratorLogMerge();
-            IndexMergeWriter indexMergeWriter = new IndexMergeWriter(mainIndexDirectory.getAbsolutePath());
+            IndexMergeWriter indexMergeWriter = new IndexMergeWriter(allIndexesDirectory.getAbsolutePath());
             return indexMergeWriter.merge(indexMergingModerator);
         }
 
         private void putTempIndexInMap(TreeMap<Integer, File> sizeToFile) {
-            File tempIndexDirectory = createDirectory(mainIndexDirectory + File.separator + "Z0");
+            File tempIndexDirectory = createDirectory(allIndexesDirectory + File.separator + "Z0");
             SimpleIndexWriter simpleIndexWriter = new SimpleIndexWriter(tempIndexDirectory);
             simpleIndexWriter.write(wordToInvertedIndexMap);
             sizeToFile.put(0, tempIndexDirectory);
@@ -207,7 +200,7 @@ public class ContinuousIndexWriter {
 
         private TreeMap<Integer, File> getSizeToIndexDirectoryMap() {
             TreeMap<Integer, File> sizeToIndexDirectory = new TreeMap<>();
-            File[] directories = mainIndexDirectory.listFiles(File::isDirectory);
+            File[] directories = allIndexesDirectory.listFiles(File::isDirectory);
             assert directories != null;
             for(File directory: directories){
                 int dirSize = getDirectorySizeFromName(directory);

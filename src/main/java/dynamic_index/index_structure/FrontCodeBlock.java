@@ -3,9 +3,8 @@ package dynamic_index.index_structure;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
-import static dynamic_index.Statics.intToByteArray;
+import static dynamic_index.global_util.MiscUtils.intToByteArray;
 
 /**
  * Represent a block of tokens (words, products) in the Front Code Block

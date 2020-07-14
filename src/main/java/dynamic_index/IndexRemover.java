@@ -1,5 +1,7 @@
 package dynamic_index;
 
+import dynamic_index.global_util.MiscUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryNotEmptyException;
@@ -7,10 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.SortedMap;
-import java.util.TreeMap;
 
-import static dynamic_index.Statics.TERM_MAP_FILE_DEBUG;
-import static dynamic_index.Statics.WORDS_MAPPING;
+import static dynamic_index.global_util.MiscUtils.TERM_MAP_FILE_DEBUG;
+import static dynamic_index.global_util.MiscUtils.WORDS_MAPPING;
 
 
 public class IndexRemover {
@@ -76,7 +77,7 @@ public class IndexRemover {
     private void deleteDirectoryWithExceptions(File toDelete) {
         try {
             // not deleting the merged index directory and files
-            if (!toDelete.getName().equals(Statics.MERGED_INDEX_DIRECTORY)) {
+            if (!toDelete.getName().equals(MiscUtils.MERGED_INDEX_DIRECTORY)) {
                 File[] childFiles = toDelete.listFiles();
                 if (childFiles != null) {
                     if (childFiles.length == 0) { //Directory is empty. Proceed for deletion
@@ -86,7 +87,7 @@ public class IndexRemover {
                             deleteFileOrDirectory(childFilePath);
                         }
                         // not deleting the indexes directory itself after deleting its contents
-                        if (!toDelete.getName().equals(Statics.INDEXES_DIR_NAME)) {
+                        if (!toDelete.getName().equals(MiscUtils.INDEXES_DIR_NAME)) {
                             deleteDirectory(toDelete); // calling again, now should be empty
                         }
                     }
@@ -116,7 +117,7 @@ public class IndexRemover {
     }
 
     private boolean shouldDeleteFile(String fileName){
-        return !fileName.equals(Statics.INVALIDATION_VECTOR_FILENAME) &&
+        return !fileName.equals(MiscUtils.INVALIDATION_FILENAME) &&
                 !fileName.equals(wordsMappingFilename);
     }
 

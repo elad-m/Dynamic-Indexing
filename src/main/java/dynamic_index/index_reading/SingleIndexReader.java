@@ -1,15 +1,16 @@
 package dynamic_index.index_reading;
 
 
-import dynamic_index.Statics;
+import dynamic_index.global_util.IndexInvalidationUtil;
+import dynamic_index.global_util.MiscUtils;
 import dynamic_index.index_structure.FrontCodeBlock;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-import static dynamic_index.Statics.filterResults;
-import static java.lang.System.exit;
+import static dynamic_index.global_util.LengthPrecodedVarintCodec.decodeBytesToIntegers;
+
 
 
 /**
@@ -22,39 +23,24 @@ public class SingleIndexReader {
     private static final int TWO_BYTES_READ = 2;
     private final int NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
     private final int FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
-
-
-
     private final int FRONT_CODE_ROW_SIZE_IN_BYTES;
-
-
-    private static final short BITWISE_AND_OPERAND_TO_DECODE_SHORT = -16385; // 101111..
-    // next line is from: 0b, 01111111, -1b, -1b
-    private static final int BITWISE_AND_OPERAND_TO_DECODE_THREE_BYTES = 8388607;
-    private static final int BITWISE_AND_OPERAND_TO_DECODE_INTEGER = 1073741823;
-    private static final int AND_OPERAND_FOR_RIGHT_SHIFTING_TRUE_BYTE_VALUE = 255;
-
 
     private String tokenToFind;
 
     final File mainIndexDirectory;
-
 
     final File currentIndexDirectory;
     private final File invertedIndexFile;
 
     private byte[] indexDictionary;
     private byte[] concatString;
-    private final File invalidationVector;
 
     public SingleIndexReader(byte[] mainIndexDictionary,
                              byte[] mainConcatString,
                              File invertedIndexFile,
-                             File invalidationVector,
                              int numOfTokensPerBlock,
                              File mainIndexDirectory) {
         this.invertedIndexFile = invertedIndexFile;
-        this.invalidationVector = invalidationVector;
         this.mainIndexDirectory = mainIndexDirectory;
         this.currentIndexDirectory = invertedIndexFile.getParentFile();
         assignArrays(mainIndexDictionary, mainConcatString);
@@ -62,7 +48,7 @@ public class SingleIndexReader {
         FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE =
                 (FrontCodeBlock.BYTES_IN_WORD_BLOCK * NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK);
         FRONT_CODE_ROW_SIZE_IN_BYTES =
-                Statics.INTEGER_SIZE + FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
+                MiscUtils.INTEGER_SIZE + FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
     }
 
     public TreeMap<Integer, Integer> getReviewsWithWord(String word) {
@@ -115,7 +101,7 @@ public class SingleIndexReader {
            in the block of a string, since it is possible that the first letter
            is not a prefix of some word in the block.
         */
-        final int intSize = Statics.INTEGER_SIZE;
+        final int intSize = MiscUtils.INTEGER_SIZE;
         int pointerToBlockInString = ByteBuffer.wrap(indexDictionary, middleInBytes, intSize).getInt();
         byte[] blockData = new byte[FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE];
         System.arraycopy(indexDictionary, middleInBytes + intSize, blockData, 0, FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE);
@@ -135,7 +121,7 @@ public class SingleIndexReader {
             byte length = blockData[i];
             byte prefixLength = blockData[i + 1];
             int freqPointer = ByteBuffer.wrap(blockData, i + TWO_BYTES_READ, Integer.BYTES).getInt();
-            int FREQ_LEN_OFFSET = Statics.INTEGER_SIZE + 2 * Byte.BYTES;
+            int FREQ_LEN_OFFSET = MiscUtils.INTEGER_SIZE + 2 * Byte.BYTES;
             int freqLength = ByteBuffer.wrap(blockData, i + FREQ_LEN_OFFSET, Integer.BYTES).getInt();
             assert length >= prefixLength: "token: " + tokenToFind;
             byte suffixLength = (byte) (length - prefixLength);
@@ -192,8 +178,8 @@ public class SingleIndexReader {
         byte[] rowToReadInto = getBytesOfInvertedIndexRAF(pointerAndLength);
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
-        if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion
-            filterResults(invalidationVector, results);
+        if(IndexInvalidationUtil.isInvalidationDirty()){ // no querying when there has been no deletion
+            IndexInvalidationUtil.filterResults(mainIndexDirectory.getAbsolutePath(), results);
         }
         return results;
     }
@@ -201,8 +187,8 @@ public class SingleIndexReader {
     TreeMap<Integer, Integer> getRidToFreqMapFromRawInvertedIndex(byte[] rowToReadInto) {
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
-        if(Statics.isInvalidationVectorIsDirty()){ // no querying when there has been no deletion
-            filterResults(invalidationVector, results);
+        if(IndexInvalidationUtil.isInvalidationDirty()){ // no querying when there has been no deletion
+            IndexInvalidationUtil.filterResults(mainIndexDirectory.getAbsolutePath(), results);
         }
         return results;
     }
@@ -215,92 +201,6 @@ public class SingleIndexReader {
         raInvertedIndexFile.read(rowToReadInto);
         raInvertedIndexFile.close();
         return rowToReadInto;
-    }
-
-
-    private List<Integer> decodeBytesToIntegers(byte[] rowInBytes) {
-        // using length pre-coded varint
-        ByteBuffer byteBufferOfRow = ByteBuffer.wrap(rowInBytes);
-        List<Integer> integersInBytesRow = new ArrayList<>();
-
-        int i = 0;
-        while (i < rowInBytes.length) {
-            byte someByte = byteBufferOfRow.get(i);
-            int numOfBytesRoRead = getNumberOfBytesToRead(someByte);
-            switch (numOfBytesRoRead) {
-                case 1:
-                    integersInBytesRow.add((int) someByte);
-                    i++;
-                    break;
-                case 2:
-                    short rid2 = byteBufferOfRow.getShort(i);
-                    int debug1 = getDecodedInteger(rid2);
-                    integersInBytesRow.add(debug1);
-                    i += 2;
-                    break;
-                case 3:
-                    byte[] threeArray = new byte[4];
-                    threeArray[0] = 0;
-                    threeArray[1] = byteBufferOfRow.get(i);
-                    threeArray[2] = byteBufferOfRow.get(i + 1);
-                    threeArray[3] = byteBufferOfRow.get(i + 2);
-                    int rid3 = ByteBuffer.wrap(threeArray).getInt();
-                    int debug2 = getDecodedInteger(rid3, true);
-                    integersInBytesRow.add(debug2);
-                    i += 3;
-                    break;
-                case 4:
-                    int rid4 = byteBufferOfRow.getInt(i);
-                    int debug3 = getDecodedInteger(rid4, false);
-                    integersInBytesRow.add(debug3);
-                    i += 4;
-                    break;
-                default:
-                    System.err.println("got not between 1-4 bytes to read");
-                    break;
-            }
-        }
-        return integersInBytesRow;
-    }
-
-    private int getNumberOfBytesToRead(byte someByte) {
-        /* Bitwise operations in java convert up to int anything it gets. To get correct results with this impediment
-         *  the constant 255 operand bellow makes all the 1s above the 8 bit of negative byte numbers to zero, so now they appear to be
-         * they true self as negative byte, e.g: -128 & 255 = 128. so now 128>>>6 = 2, what we wanted. Credits for the IDE
-         * for bringing this to my attention.*/
-        int javaBadTypePromotionByProduct = someByte & AND_OPERAND_FOR_RIGHT_SHIFTING_TRUE_BYTE_VALUE;
-        int firstTwoBitsValue = javaBadTypePromotionByProduct >>> 6;
-        int numOfBytesToRead;
-        switch (firstTwoBitsValue) {
-            case 0:
-                numOfBytesToRead = 1;
-                break;
-            case 1:
-                numOfBytesToRead = 2;
-                break;
-            case 2:
-                numOfBytesToRead = 3;
-                break;
-            case 3:
-                numOfBytesToRead = 4;
-                break;
-            default:
-                System.err.println("two bits extraction failed");
-                exit(2);
-                numOfBytesToRead = 0;
-        }
-        return numOfBytesToRead;
-    }
-
-    private int getDecodedInteger(short shortRid) {
-        return (shortRid & BITWISE_AND_OPERAND_TO_DECODE_SHORT);
-    }
-
-    private int getDecodedInteger(int intRid, boolean isThree) {
-        if (isThree)
-            return (intRid & BITWISE_AND_OPERAND_TO_DECODE_THREE_BYTES);
-        else
-            return (intRid & BITWISE_AND_OPERAND_TO_DECODE_INTEGER);
     }
 
     private TreeMap<Integer,Integer> getMapFromListOfIntegers(List<Integer> integersInBytesRow) {

@@ -1,22 +1,22 @@
-package dynamic_index.runExperiment;
+package dynamic_index.index_experiments;
 
 import dynamic_index.IndexReader;
 import dynamic_index.IndexWriter;
-import dynamic_index.Statics;
+import dynamic_index.global_util.PrintingUtil;
+import dynamic_index.global_util.MiscUtils;
 
 import java.io.File;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static dynamic_index.Statics.printElapsedTimeToLog;
 
 public class SimpleMergeExperiment extends Experiment {
 
 
     public SimpleMergeExperiment(String localDir, int inputScale) {
         super(localDir,
-                localDir + File.separatorChar + Statics.INDEXES_DIR_NAME,
+                localDir + File.separatorChar + MiscUtils.INDEXES_DIR_NAME,
                 inputScale,
                 false);
     }
@@ -27,7 +27,7 @@ public class SimpleMergeExperiment extends Experiment {
         createTestLog("Simple Merge ");
 
         IndexWriter indexWriter = buildIndex();
-        IndexReader indexReader = new IndexReader(indexDirectory);
+        IndexReader indexReader = new IndexReader(allIndexesDirectory);
         queryAfterBuildIndex(indexReader);
 
         indexReader = insertToIndex(indexWriter);
@@ -36,7 +36,7 @@ public class SimpleMergeExperiment extends Experiment {
         deleteReviews(indexWriter);
         queryAfterDelete(indexReader);
 
-        indexReader = mergeIndex(indexDirectory, indexWriter, indexReader);
+        indexReader = mergeIndex(allIndexesDirectory, indexWriter, indexReader);
         queryAfterMerge(indexReader);
 
         tlog.close();
@@ -46,7 +46,7 @@ public class SimpleMergeExperiment extends Experiment {
         long startTime = System.currentTimeMillis();
         System.out.println("=====\n" + "Merging All Indexes " + "\n=====");
         indexWriter.merge(indexReader);
-        printElapsedTimeToLog(tlog, startTime, "\n\tIndex Merging");
+        PrintingUtil.printElapsedTimeToLog(tlog, startTime, "\n\tIndex Merging");
         return new IndexReader(indexDirectory);
     }
 
@@ -57,7 +57,7 @@ public class SimpleMergeExperiment extends Experiment {
 
     private void deleteReviews(IndexWriter indexWriter) {
         System.out.println("=====\n" + "Index deletion " + "\n=====");
-        indexWriter.removeReviews(indexDirectory, scalingCases.getDelReviews());
+        indexWriter.removeReviews(allIndexesDirectory, scalingCases.getDelReviews());
     }
 
     private void queryAfterDelete(IndexReader indexReader) {
@@ -74,13 +74,13 @@ public class SimpleMergeExperiment extends Experiment {
                     getAuxiliaryIndexDirPattern(i),
                     scalingCases.getInsertFileName(i));
         }
-        return new IndexReader(indexDirectory);
+        return new IndexReader(allIndexesDirectory);
     }
 
     private void insertToIndex(IndexWriter indexWriter, String auxIndexDirectoryName, String rawDataFilename) {
         long startTime = System.currentTimeMillis();
         indexWriter.insert(rawDataFilename, auxIndexDirectoryName);
-        printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
+        PrintingUtil.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
     }
 
     private void queryAfterInsert(IndexReader indexReader){
@@ -90,9 +90,9 @@ public class SimpleMergeExperiment extends Experiment {
 
     private IndexWriter buildIndex() {
         long startTime = System.currentTimeMillis();
-        IndexWriter indexWriter = new IndexWriter(indexDirectory, inputScale);
-        indexWriter.constructIndex(scalingCases.getInputFilename(), indexDirectory);
-        printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
+        IndexWriter indexWriter = new IndexWriter(allIndexesDirectory, inputScale);
+        indexWriter.constructIndex(scalingCases.getInputFilename(), allIndexesDirectory);
+        PrintingUtil.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
         return indexWriter;
     }
 
@@ -119,13 +119,13 @@ public class SimpleMergeExperiment extends Experiment {
         String[] randomWords = getRandomWords(indexDirectoryName, numOfWords);
         long startReviewsWithToken = System.currentTimeMillis();
         testGetReviewsWithToken(indexReader, randomWords);
-        printElapsedTimeToLog(tlog, startReviewsWithToken, numOfWords + " random getReviewsWithToken");
+        PrintingUtil.printElapsedTimeToLog(tlog, startReviewsWithToken, numOfWords + " random getReviewsWithToken");
 
     }
 
     private String[] getRandomWords(String indexDirectoryName, int numOfWords) {
         File indexDirectory = new File(indexDirectoryName);
-        Map<Integer, String> wordIdToString = Statics.loadMapFromFile(indexDirectory, Statics.WORDS_MAPPING);
+        Map<Integer, String> wordIdToString = MiscUtils.loadMapFromFile(indexDirectory, MiscUtils.WORDS_MAPPING);
         String[] randomWords = new String[numOfWords];
         for (int i = 0; i < numOfWords; i++) {
             int randomNum = ThreadLocalRandom.current().nextInt(0, wordIdToString.size());
