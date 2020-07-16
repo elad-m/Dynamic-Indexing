@@ -80,7 +80,6 @@ public class ExternalIndexWriter {
             byte[] blockAsBytes = new byte[readingBlockSizeInBytes];
             int amountOfBytesRead = sortedFileBIS.read(blockAsBytes);
             while (amountOfBytesRead != -1) {
-//                System.out.println("numbOfWordsWrittenDebug: " + numbOfWordsWrittenDebug);
                 loadBlockToMap(blockAsBytes, amountOfBytesRead, termIdToTerm);
                 writeMapToFiles();
                 amountOfBytesRead = sortedFileBIS.read(blockAsBytes);
@@ -181,18 +180,6 @@ public class ExternalIndexWriter {
         }
     }
 
-//    private void writeMetaToFile(InvertedIndexOfWord invertedIndexOfWord) {
-//        try {
-//            int reviewWithWordCounter = invertedIndexOfWord.getNumOfReviews();
-//            int frequencyCumSum = invertedIndexOfWord.getNumOfMentions();
-//            metaOutputStream.write(Statics.intToByteArray(reviewWithWordCounter));
-//            metaOutputStream.write(Statics.intToByteArray(frequencyCumSum));
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
-
     void writeFrontCodeFile(int stopWritingWordsAt) throws IOException {
         TreeMap<String, InvertedIndex> blockOfWordsToInvertedIndex = new TreeMap<>();
         int i = 0;
@@ -233,7 +220,6 @@ public class ExternalIndexWriter {
         frontCodeOutputStream.close();
         invertedOutputStream.close();
         bufferedStringConcatWriter.close();
-//        metaOutputStream.close();
     }
 
 

@@ -274,6 +274,7 @@ public class IndexWriter {
         IndexRemover indexRemover = new IndexRemover();
         indexRemover.removeFilesAfterMerge(allIndexesDirectory.getAbsolutePath());
         moveMergedFilesToMainIndex(mergedDirectory);
+        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
     }
 
     private void emptyInvalidationFile() {

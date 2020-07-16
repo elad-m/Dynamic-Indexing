@@ -23,21 +23,25 @@ import static dynamic_index.global_tools.ParsingTool.textToNormalizedTokens;
 public class LogMergeIndexWriter {
 
     private final TemporaryIndex temporaryIndex;
-    private final ReviewsMetaDataIndexWriter reviewsMetaDataIndexWriter;
     private final File allIndexesDirectory;
 
+    private ReviewsMetaDataIndexWriter reviewsMetaDataIndexWriter;
     private int reviewCounter = 1; // not necessarily the number of reviews in index in practice because deletion
 
     public LogMergeIndexWriter(String allIndexesDirectory) {
         this.allIndexesDirectory = createDirectory(allIndexesDirectory);
-        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory);
         this.temporaryIndex = new TemporaryIndex();
+    }
 
+    private void reinitializeReviewMetaDataWriter(){
+        reviewsMetaDataIndexWriter.closeWriter();
+        reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
     }
 
     public void construct(String inputFile) {
         try {
             BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
+            this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
             StringBuilder reviewConcatFields = new StringBuilder();
 
             String line = bufferedReaderOfRawInput.readLine();
@@ -51,7 +55,7 @@ public class LogMergeIndexWriter {
                 line = bufferedReaderOfRawInput.readLine();
             }
             bufferedReaderOfRawInput.close();
-            reviewsMetaDataIndexWriter.closeWriter();
+            reinitializeReviewMetaDataWriter();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -182,10 +186,12 @@ public class LogMergeIndexWriter {
                 Path z0Path = indexSizeToIndexDirectory.firstEntry().getValue().toPath();
                 Files.move(z0Path, z0Path.resolveSibling("0"));
             } else if (numberOfFirstIndexDirectoriesToMerge > 1) { // at least two indexes to merge including in-memory
-                boolean isMergingAllIndexes = numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size();
                 SortedMap<Integer, File> onlyFilesToMerge = indexSizeToIndexDirectory.headMap(numberOfFirstIndexDirectoriesToMerge);
+
+                boolean isMergingAllIndexes = numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size();
                 File mergedDirectory = mergeIndexDirectories(onlyFilesToMerge, isMergingAllIndexes);
                 emptyInvalidationFileIfNeeded(isMergingAllIndexes);
+
                 renameMergedDirectory(mergedDirectory, numberOfFirstIndexDirectoriesToMerge);
                 (new IndexRemover()).removeFiles(onlyFilesToMerge);
             } else {
@@ -197,7 +203,6 @@ public class LogMergeIndexWriter {
         private void emptyInvalidationFileIfNeeded(boolean shouldSetNotDirty) {
             // if we are merge all index files, then we don't need to query the invalidation vector again.
             if (shouldSetNotDirty) {
-
                 IndexInvalidationTool.emptyInvalidationFile(allIndexesDirectory.getAbsolutePath());
             }
         }
@@ -212,11 +217,12 @@ public class LogMergeIndexWriter {
         }
 
         private File mergeIndexDirectories(SortedMap<Integer, File> sizeToFilesToMerge, boolean mergingAllIndexes) {
+            // building the merger
             IndexReader indexReader = new IndexReader(allIndexesDirectory.getAbsolutePath(),
                     sizeToFilesToMerge.values());
-            if (mergingAllIndexes)
-                reviewsMetaDataIndexWriter.closeWriter();
-            IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModeratorLogMerge(mergingAllIndexes);
+            IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModeratorLogMerge();
+
+            // writing the index with the merger
             IndexMergeWriter indexMergeWriter = new IndexMergeWriter(allIndexesDirectory.getAbsolutePath());
             return indexMergeWriter.merge(indexMergingModerator);
         }

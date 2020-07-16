@@ -2,7 +2,7 @@ package dynamic_index;
 
 import dynamic_index.global_tools.MiscTools;
 import dynamic_index.index_reading.IndexMergingModerator;
-import dynamic_index.index_reading.MetaDataIndexReader;
+import dynamic_index.index_reading.ReviewsMetaDataIndexReader;
 import dynamic_index.index_reading.SingleIndexReader;
 
 import java.io.*;
@@ -19,7 +19,7 @@ public class IndexReader {
     // place of main index and its auxiliary indexes directories
     private final File mainIndexDirectory;
     private File mainInvertedIndexFile;
-    private final MetaDataIndexReader metaDataIndexReader;
+    private final ReviewsMetaDataIndexReader reviewMetaDataIndexReader;
 
     // main index data
     private byte[] mainIndexDictionary;
@@ -41,7 +41,7 @@ public class IndexReader {
      */
     public IndexReader(String dir) {
         this.mainIndexDirectory = new File(dir);
-        this.metaDataIndexReader = new MetaDataIndexReader(mainIndexDirectory);
+        this.reviewMetaDataIndexReader = new ReviewsMetaDataIndexReader(mainIndexDirectory);
         loadAllIndexesWithMain();
     }
 
@@ -52,7 +52,7 @@ public class IndexReader {
      */
     IndexReader(String dir, Collection<File> indexFilesToMerge) {
         this.mainIndexDirectory = new File(dir);
-        this.metaDataIndexReader = new MetaDataIndexReader(mainIndexDirectory);
+        this.reviewMetaDataIndexReader = new ReviewsMetaDataIndexReader(mainIndexDirectory);
         this.numOfSubIndexes = indexFilesToMerge.size();
         loadNFirstIndexes(indexFilesToMerge);
     }
@@ -65,7 +65,7 @@ public class IndexReader {
      */
     public IndexReader(String dir, boolean dummyForLogMerge){
         this.mainIndexDirectory = new File(dir);
-        this.metaDataIndexReader = new MetaDataIndexReader(mainIndexDirectory);
+        this.reviewMetaDataIndexReader = new ReviewsMetaDataIndexReader(mainIndexDirectory);
         List<File> allDirectories = Arrays.asList(Objects.requireNonNull(mainIndexDirectory.listFiles(File::isDirectory)));
         this.numOfSubIndexes = allDirectories.size();
         loadNFirstIndexes(allDirectories);
@@ -288,7 +288,7 @@ public class IndexReader {
      * Returns null if there is no review with the given identifier
      */
     public String getProductId(int reviewId) {
-        return metaDataIndexReader.getProductId(reviewId);
+        return reviewMetaDataIndexReader.getProductId(reviewId);
     }
 
     /**
@@ -296,7 +296,7 @@ public class IndexReader {
      * Returns -1 if there is no review with the given identifier
      */
     public int getReviewScore(int reviewId) {
-        return metaDataIndexReader.getReviewScore(reviewId);
+        return reviewMetaDataIndexReader.getReviewScore(reviewId);
     }
 
     /**
@@ -304,7 +304,7 @@ public class IndexReader {
      * Returns -1 if there is no review with the given identifier
      */
     public int getReviewHelpfulnessNumerator(int reviewId) {
-        return metaDataIndexReader.getReviewHelpfulnessNumerator(reviewId);
+        return reviewMetaDataIndexReader.getReviewHelpfulnessNumerator(reviewId);
     }
 
     /**
@@ -312,7 +312,7 @@ public class IndexReader {
      * Returns -1 if there is no review with the given identifier
      */
     public int getReviewHelpfulnessDenominator(int reviewId) {
-        return metaDataIndexReader.getReviewHelpfulnessDenominator(reviewId);
+        return reviewMetaDataIndexReader.getReviewHelpfulnessDenominator(reviewId);
     }
 
     /**
@@ -320,7 +320,7 @@ public class IndexReader {
      * Returns -1 if there is no review with the given identifier
      */
     public int getReviewLength(int reviewId) {
-        return metaDataIndexReader.getReviewLength(reviewId);
+        return reviewMetaDataIndexReader.getReviewLength(reviewId);
     }
 
 
@@ -328,7 +328,7 @@ public class IndexReader {
      * @return Number of reviews in the index minus the deleted ones
      */
     public int getNumberOfReviews() {
-        return metaDataIndexReader.getTotalNumberOfReviews();
+        return reviewMetaDataIndexReader.getTotalNumberOfReviews();
     }
 
     /**
@@ -336,7 +336,7 @@ public class IndexReader {
      * in the constructor)
      */
     public int getTotalNumberOfTokens(){
-        return metaDataIndexReader.getTotalNumberOfTokens();
+        return reviewMetaDataIndexReader.getTotalNumberOfTokens();
     }
 
 
@@ -359,7 +359,7 @@ public class IndexReader {
         // adding auxiliary indexes
         indexMergingModerator.addAll(getAllSingleIndexReaders());
         // merging the review meta data (filtering deleted reviews)
-        metaDataIndexReader.rewriteReviewMetaData();
+        reviewMetaDataIndexReader.rewriteReviewMetaData();
         return indexMergingModerator;
     }
 
@@ -380,18 +380,16 @@ public class IndexReader {
      * Creates and returns IndexMergingModerator for the log-merge: merging all numOfSubIndexes directories: so
      * not necessarily all sub-indexes, but all sub-indexes that should be merged.
      * Should be only used when initializes with the log-merge constructor, i.e. no main index.
-     * @param mergingAllIndexes - only when merging all indexes we want to reconstruct the review meta data (i.e. filter
-     *                          it for deletions)
      * @return IndexMergingModerator with all indexes according to constructor index initialization.
      */
-    public IndexMergingModerator getIndexMergingModeratorLogMerge(boolean mergingAllIndexes){
+    public IndexMergingModerator getIndexMergingModeratorLogMerge(){
         IndexMergingModerator indexMergingModerator = new IndexMergingModerator();
         indexMergingModerator.addAll(getAllSingleIndexReaders());
-
-        // merging the review meta data (filtering deleted reviews)
-        if(mergingAllIndexes)
-            metaDataIndexReader.rewriteReviewMetaData();
         return indexMergingModerator;
+    }
+
+    public void rewriteReviewMetaDataMerge(){
+        reviewMetaDataIndexReader.rewriteReviewMetaData();
     }
 
 

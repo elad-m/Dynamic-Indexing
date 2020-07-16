@@ -40,7 +40,6 @@ public class ExternalMergeIteration {
     File merge() {
         for (int n = 0; n < numOfMergeFiles; n += numOfFilesToMergeToOneFile) {
             // merge all subsets of temp files
-//            System.out.println("MERGE SUBSET: " + n);
             outputBlockWriter.createNewFile();
             int stopSubIterationAt = (Math.min(n + numOfFilesToMergeToOneFile, numOfMergeFiles));
             for (int i = n; i < stopSubIterationAt; i++) {

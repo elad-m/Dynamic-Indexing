@@ -17,13 +17,13 @@ import static dynamic_index.global_tools.MiscTools.REVIEW_META_DATA_TEMP_FILENAM
  * Created with each IndexReader object. This means, that this class can assume no change in index data
  * while this object is alive.
  */
-public class MetaDataIndexReader {
+public class ReviewsMetaDataIndexReader {
 
     private File reviewMetaDataFile;
     private final HashMap<Integer, ReviewMetaData> ridToMetaDataMap = new HashMap<>();
     private int totalNumberOfTokens = 0;
 
-    public MetaDataIndexReader(File allIndexDirectory) {
+    public ReviewsMetaDataIndexReader(File allIndexDirectory) {
         reviewMetaDataFile = new File(allIndexDirectory.getPath()
                 + File.separator + MiscTools.REVIEW_META_DATA_FILENAME);
         loadFileToMap();

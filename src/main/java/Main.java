@@ -1,3 +1,4 @@
+import dynamic_index.index_experiments.LogMergeExperiment;
 import dynamic_index.index_experiments.SimpleMergeExperiment;
 
 @SuppressWarnings({"SameParameterValue"})
@@ -10,8 +11,8 @@ public class Main {
         System.out.println("======================================= Starting Experiment =======================================");
         SimpleMergeExperiment simpleMergeExperiment = new SimpleMergeExperiment(localDir, 4);
         simpleMergeExperiment.runExperiment();
-//        LogMergeExperiment logMergeExperiment = new LogMergeExperiment(localDir, 4);
-//        logMergeExperiment.runExperiment();
+        LogMergeExperiment logMergeExperiment = new LogMergeExperiment(localDir, 4);
+        logMergeExperiment.runExperiment();
 
     }
 

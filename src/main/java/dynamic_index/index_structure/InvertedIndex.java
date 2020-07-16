@@ -168,7 +168,6 @@ public class InvertedIndex implements WritingMeasurable {
     }
 
     private int writeCompressedRidsFromDumpFile(BufferedOutputStream bosOfAllInverted, int lastRid) throws IOException {
-//        int lastRid = 0;
         int currentRid;
         dosRawRidDumpFile.close(); // close writing before reading
         DataInputStream disRidDumpFile = new DataInputStream(new BufferedInputStream(new FileInputStream(ridDumpFile)));
