@@ -1,4 +1,4 @@
-package dynamic_index.global_util;
+package dynamic_index.global_tools;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -8,7 +8,7 @@ import static java.lang.System.exit;
 
 /**
  * Encodes and decodes between integers to Length Precoded Varint byte array, as a compression method.
- * Integers encodeable by this method are in the range of [0...2^30-1], since the 2 MSB bits are used for
+ * Integers encodable by this method are in the range of [0...2^30-1], since the 2 MSB bits are used for
  * encoding the length by bytes of the encoded integer.
  */
 public class LengthPrecodedVarintCodec {

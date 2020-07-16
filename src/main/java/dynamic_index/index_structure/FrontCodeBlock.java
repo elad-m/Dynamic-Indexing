@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static dynamic_index.global_util.MiscUtils.intToByteArray;
+import static dynamic_index.global_tools.MiscTools.intToByteArray;
 
 /**
  * Represent a block of tokens (words, products) in the Front Code Block

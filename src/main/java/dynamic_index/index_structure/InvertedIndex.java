@@ -1,14 +1,14 @@
 package dynamic_index.index_structure;
 
 
-import dynamic_index.global_util.MiscUtils;
+import dynamic_index.global_tools.MiscTools;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static dynamic_index.global_util.LengthPrecodedVarintCodec.intToCompressedByteArray;
+import static dynamic_index.global_tools.LengthPrecodedVarintCodec.intToCompressedByteArray;
 
 
 /**
@@ -45,16 +45,19 @@ public class InvertedIndex implements WritingMeasurable {
 
 
     /**
-     * Create inverted index with minimal data: a word that appears in a review with rid.
+     * Create inverted index with minimal data: a word that appears in a review with rid and the
+     * frequency of that word int this rid. Intended as to not increase the size of the
+     * InvertedIndex (by reviews) by more than 1.
      * @param word - a word in the review
      * @param rid - review ID (docID)
+     * @param freqForRid - the word's frequency in the review of rid.
      * @param indexDirectory - where to keep temporary files if necessary
      */
-    public InvertedIndex(String word, int rid, File indexDirectory){
+    public InvertedIndex(String word, int rid, int freqForRid, File indexDirectory){
         this.word = word;
         this.indexDirectory = indexDirectory;
         this.indexName = indexDirectory.getName();
-        put(rid, 1);
+        put(rid, freqForRid);
     }
 
     /**
@@ -83,7 +86,12 @@ public class InvertedIndex implements WritingMeasurable {
         else return -1; // should not have a file
     }
 
-    private void put(int rid, int frequency) {
+    /**
+     * Inserts the rid and frequency to the map
+     * @param rid - rid that a word is in
+     * @param frequency - frequency of that word in this rid
+     */
+    public void put(int rid, int frequency) {
         if (ridToFrequencyMap.size() == MAX_NUM_OF_PAIRS) {
             writeMapToDumpFiles(); // counting on sorted here
             emptyInvertedIndexAfterWriting(); // the whole point of writing to file is free memory resources
@@ -97,17 +105,13 @@ public class InvertedIndex implements WritingMeasurable {
     }
 
     /**
-     * Insertes all the rids and their frequencies to the class's map
+     * Inserts all the rids and their frequencies to the class's map
      * @param ridToFrequency - rids and the frequency of this word in it.
      */
     public void putAll(Map<Integer, Integer> ridToFrequency) {
         for (Map.Entry<Integer, Integer> anRidToFrequency : ridToFrequency.entrySet()) {
             put(anRidToFrequency.getKey(), anRidToFrequency.getValue());
         }
-    }
-
-    public void put(int rid){
-        put(rid, 1);
     }
 
     private void writeMapToDumpFiles() {
@@ -132,10 +136,10 @@ public class InvertedIndex implements WritingMeasurable {
 
     private void createFileAndStream() throws FileNotFoundException {
         ridDumpFile = new File(indexDirectory.getPath() + File.separator + word + "RidTmp" + indexName
-                + MiscUtils.BINARY_FILE_SUFFIX);
+                + MiscTools.BINARY_FILE_SUFFIX);
         freqDumpFile = new File(indexDirectory.getPath() + File.separator + word + "FreqTmp" + indexName
-                + MiscUtils.BINARY_FILE_SUFFIX);
-        int ioBufferSize = MiscUtils.roundUpToProductOfPairSize(ridToFrequencyMap.size() * MiscUtils.INTEGER_SIZE);
+                + MiscTools.BINARY_FILE_SUFFIX);
+        int ioBufferSize = MiscTools.roundUpToProductOfPairSize(ridToFrequencyMap.size() * MiscTools.INTEGER_SIZE);
         dosRawRidDumpFile = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(ridDumpFile), ioBufferSize));
         dosRawFreqDumpFile = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(freqDumpFile), ioBufferSize));
         System.out.println("\tcreated file with path: " + ridDumpFile.getPath()  + " and " + freqDumpFile.getPath());
@@ -168,7 +172,7 @@ public class InvertedIndex implements WritingMeasurable {
         int currentRid;
         dosRawRidDumpFile.close(); // close writing before reading
         DataInputStream disRidDumpFile = new DataInputStream(new BufferedInputStream(new FileInputStream(ridDumpFile)));
-        int fileSizeInInts = ((int) ridDumpFile.length() / MiscUtils.INTEGER_SIZE);
+        int fileSizeInInts = ((int) ridDumpFile.length() / MiscTools.INTEGER_SIZE);
 
         for(int i = 0; i < fileSizeInInts; i++) { // guaranteed to not be -1 in the first iteration
             currentRid = disRidDumpFile.readInt();
@@ -214,7 +218,7 @@ public class InvertedIndex implements WritingMeasurable {
                 deleteDumpFiles();
             }
             writeCompressedFrequenciesFromInMemory(bosOfAllInverted);
-            setFinishedWriting(true);
+            setFinishedWriting();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -224,7 +228,7 @@ public class InvertedIndex implements WritingMeasurable {
         int freq;
         dosRawFreqDumpFile.close(); // close writing before reading
         DataInputStream disFreqDumpFile = new DataInputStream(new BufferedInputStream(new FileInputStream(freqDumpFile)));
-        int fileSizeInInts = ((int) freqDumpFile.length() / MiscUtils.INTEGER_SIZE);
+        int fileSizeInInts = ((int) freqDumpFile.length() / MiscTools.INTEGER_SIZE);
         for(int i = 0; i < fileSizeInInts; i++) { // guaranteed to not be -1 in the first iteration
             freq = disFreqDumpFile.readInt();
             writeSingleFrequencyToExternalOutput(bosOfAllInverted, freq);
@@ -267,78 +271,18 @@ public class InvertedIndex implements WritingMeasurable {
         return amountOfBytesWrittenExternalOutput;
     }
 
-    private void setFinishedWriting(boolean setTo) {
-        finishedWriting = setTo;
+    private void setFinishedWriting() {
+        finishedWriting = true;
     }
 
     @Override
     public String toString() {
         return "InvertedIndexOfWord{" +
                 "word: " + word +
+                "indexName" + indexName +
                 " rids: " + ridToFrequencyMap.keySet() +
                 '}' + '\n';
     }
-
-//    private static final int[] LENGTH_PRECODED_MAXIMA =
-//            {63, 16383, 4194303, 1073741823};// 2^6-1, 2^14-1, 2^22-1, 2^30-1
-//    private static final int[] BITWISE_OR_OPERAND_TO_ENCODE_LENGTH_PRECODED_VARINT =
-//            {0, 16384, 8388608, -1073741824}; // 00|zeros, 2^14, 2^23, 2^31+2^30
-//
-//    /**
-//     * Given an integer in the range [0...2^30-1], returns the length-precoded byte array of the integer.
-//     * Length pre-coding codes the length of the integer value in byte in the first 2 bits of the byte array.
-//     * This way smaller numbers take less number of bytes for writing.
-//     * The ranges for conversions and the conversion tools are detailed in the constants above.
-//     * @param value - an integer value in the range [0...2^30-1] (last 2 MSB are for encoding)
-//     * @return the value of the integer encoded in length-precoded varint method.
-//     */
-//    public static byte[] intToCompressedByteArray(int value){
-//        byte[] ret = new byte[0];
-//        if (value <= LENGTH_PRECODED_MAXIMA[0]) {
-//            ret = toLengthPrecodedVarint(value, 1);
-//        } else if (value <= LENGTH_PRECODED_MAXIMA[1]) {
-//            ret = toLengthPrecodedVarint(value, 2);
-//        } else if (value <= LENGTH_PRECODED_MAXIMA[2]) {
-//            ret = toLengthPrecodedVarint(value, 3);
-//        } else if (value <= LENGTH_PRECODED_MAXIMA[3]) {
-//            ret = toLengthPrecodedVarint(value, 4);
-//        } else {
-//            System.err.println("Value too large to be represented in Length Precoded Varint");
-//            System.exit(8);
-//        }
-//        return ret;
-//    }
-//
-//    private static byte[] toLengthPrecodedVarint(int input, int numberOfBytes) {
-//        byte[] resultLenPrecodeVarint;
-//        if (numberOfBytes == 1) {
-//            resultLenPrecodeVarint = new byte[]{(byte) input};
-//        } else if (numberOfBytes == 2) {
-//            ByteBuffer byteBuffer = ByteBuffer.allocate(Short.BYTES);
-//            byteBuffer.putShort((short) (input | BITWISE_OR_OPERAND_TO_ENCODE_LENGTH_PRECODED_VARINT[1]));
-//            resultLenPrecodeVarint = byteBuffer.array();
-//            assert resultLenPrecodeVarint.length == 2;
-//        } else if (numberOfBytes == 3) {
-//            ByteBuffer byteBufferTarget = ByteBuffer.allocate(Short.BYTES + 1);
-//            ByteBuffer byteBufferInteger = ByteBuffer.allocate(Integer.BYTES);
-//            byteBufferInteger.putInt(input | BITWISE_OR_OPERAND_TO_ENCODE_LENGTH_PRECODED_VARINT[2]);
-//            byteBufferTarget.put(byteBufferInteger.get(1));
-//            byteBufferTarget.put(byteBufferInteger.get(2));
-//            byteBufferTarget.put(byteBufferInteger.get(3));
-//            resultLenPrecodeVarint = byteBufferTarget.array();
-//            assert resultLenPrecodeVarint.length == 3;
-//        } else if (numberOfBytes == 4) {
-//            ByteBuffer byteBufferInteger = ByteBuffer.allocate(Integer.BYTES);
-//            byteBufferInteger.putInt(input | BITWISE_OR_OPERAND_TO_ENCODE_LENGTH_PRECODED_VARINT[3]);
-//            resultLenPrecodeVarint = byteBufferInteger.array();
-//            assert resultLenPrecodeVarint.length == 4;
-//        } else {
-//            System.err.println("Number bigger than length-precoded varint integer detected");
-//            resultLenPrecodeVarint = new byte[0];
-//        }
-//        return resultLenPrecodeVarint;
-//    }
-
 
     int getFirstRid(){
         int firstRid;

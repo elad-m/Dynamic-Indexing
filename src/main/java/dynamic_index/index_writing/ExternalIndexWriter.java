@@ -1,6 +1,6 @@
 package dynamic_index.index_writing;
 
-import dynamic_index.global_util.MiscUtils;
+import dynamic_index.global_tools.MiscTools;
 import dynamic_index.index_structure.FrontCodeBlock;
 import dynamic_index.index_structure.InvertedIndex;
 
@@ -20,7 +20,7 @@ import java.util.TreeMap;
 public class ExternalIndexWriter {
 
     private final File indexDirectory;
-    private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(MiscUtils.STRING_BUILDER_DEFAULT_CAPACITY);
+    private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(MiscTools.STRING_BUILDER_DEFAULT_CAPACITY);
     private int numOfCharactersWrittenInSuffixFile = 0;
     private int numOfBytesWrittenInInvertedIndexFile = 0;
 
@@ -37,9 +37,9 @@ public class ExternalIndexWriter {
     }
 
     private void instantiateIndexFiles(int readingBlockSize) {
-        File frontCodedFile = new File(indexDirectory + File.separator + MiscUtils.WORDS_FRONT_CODED_FILENAME);
-        File invIndexFile = new File(indexDirectory + File.separator + MiscUtils.WORDS_INVERTED_INDEX_FILENAME);
-        File stringConcatFile = new File(indexDirectory + File.separator + MiscUtils.WORDS_CONCAT_FILENAME);
+        File frontCodedFile = new File(indexDirectory + File.separator + MiscTools.WORDS_FRONT_CODED_FILENAME);
+        File invIndexFile = new File(indexDirectory + File.separator + MiscTools.WORDS_INVERTED_INDEX_FILENAME);
+        File stringConcatFile = new File(indexDirectory + File.separator + MiscTools.WORDS_CONCAT_FILENAME);
         try {
             if (frontCodedFile.createNewFile()
                     && invIndexFile.createNewFile()
@@ -62,10 +62,10 @@ public class ExternalIndexWriter {
         InvertedIndex.MAX_NUM_OF_PAIRS *= Math.max(1, reviewCounter / 1000);
         System.out.println("MAX_NUM_OF_PAIRS Words: " + InvertedIndex.MAX_NUM_OF_PAIRS);
 
-        int readingBlockSizeInBytes = readBlockSizeInPairs * MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES;
+        int readingBlockSizeInBytes = readBlockSizeInPairs * MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
         instantiateIndexFiles(readingBlockSizeInBytes);
         File sortedFile = new File(indexDirectory + File.separator
-                + MiscUtils.WORDS_SORTED_FILE_NAME);
+                + MiscTools.WORDS_SORTED_FILE_NAME);
 
         System.out.println("reading block size in WORDS writer in bytes: " + readingBlockSizeInBytes);
         System.out.println("NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK: " + numOfTokensInFrontCodeBlock);
@@ -100,7 +100,7 @@ public class ExternalIndexWriter {
         List<Integer> ridsOfATid = new ArrayList<>(); // should result in ordered list
 
         int previousTid = blockByteBuffer.getInt(0);
-        for (int i = 0; i < amountOfBytesRead; i += MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES) {
+        for (int i = 0; i < amountOfBytesRead; i += MiscTools.PAIR_OF_INT_SIZE_IN_BYTES) {
             if (blockByteBuffer.getInt(i) == 0) {
                 break; // possibly hides other reasons for zeros...
             }
@@ -157,7 +157,7 @@ public class ExternalIndexWriter {
             if (wordToInvertedIndex.size() % numOfTokensInFrontCodeBlock != 0) {
                 // can't write less than a front block number of tokens
                 // guarantees to reduce the number of words written by at least 1, possibly all
-                stopAt = MiscUtils.roundDownToMultiplicationOf(wordToInvertedIndex.size(),
+                stopAt = MiscTools.roundDownToMultiplicationOf(wordToInvertedIndex.size(),
                         numOfTokensInFrontCodeBlock);
             } else {
                 /* can't write all the words since the last word in a block might have more data for it.
@@ -225,7 +225,7 @@ public class ExternalIndexWriter {
         }
         wordToInvertedIndex.clear();
         wordToInvertedIndex.putAll(iterationRemainder);
-        allWordsSuffixConcatInBlock = new StringBuilder(MiscUtils.STRING_BUILDER_DEFAULT_CAPACITY);
+        allWordsSuffixConcatInBlock = new StringBuilder(MiscTools.STRING_BUILDER_DEFAULT_CAPACITY);
     }
 
 

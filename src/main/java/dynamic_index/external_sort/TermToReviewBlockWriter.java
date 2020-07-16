@@ -1,7 +1,7 @@
 package dynamic_index.external_sort;
 
 
-import dynamic_index.global_util.MiscUtils;
+import dynamic_index.global_tools.MiscTools;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static dynamic_index.global_util.MiscUtils.createDirectory;
-import static dynamic_index.global_util.MiscUtils.estimateBestSizeOfWordsBlocks;
+import static dynamic_index.global_tools.MiscTools.createDirectory;
+import static dynamic_index.global_tools.MiscTools.estimateBestSizeOfWordsBlocks;
 
 public class TermToReviewBlockWriter {
 
@@ -27,7 +27,7 @@ public class TermToReviewBlockWriter {
     public TermToReviewBlockWriter(String indexDirectory, int numOfTokens, String termType) {
         TERM_TYPE = termType;
         BLOCK_SIZE_IN_INT_PAIRS = estimateBestSizeOfWordsBlocks(numOfTokens, false);
-        BLOCK_SIZE_IN_BYTES = BLOCK_SIZE_IN_INT_PAIRS * MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES;
+        BLOCK_SIZE_IN_BYTES = BLOCK_SIZE_IN_INT_PAIRS * MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
         termIdReviewIdPairs = new ArrayList<>(BLOCK_SIZE_IN_INT_PAIRS);
         createMergeFilesDirectory(indexDirectory);
         createNewFile();
@@ -43,7 +43,7 @@ public class TermToReviewBlockWriter {
 
     private void createMergeFilesDirectory(String indexDirectory) {
         final String TEMP_FILE_STORE = indexDirectory + File.separator
-                + TERM_TYPE + MiscUtils.MERGE_FILES_DIRECTORY_NAME + "0";
+                + TERM_TYPE + MiscTools.MERGE_FILES_DIRECTORY_NAME + "0";
         this.mergeFilesDirectory = createDirectory(TEMP_FILE_STORE);
     }
 
@@ -101,17 +101,17 @@ public class TermToReviewBlockWriter {
         int numOfPairs = termIdReviewIdPairs.size();
         byte[] listInBytes;
         if (numOfPairs <= BYTE_ARRAY_MAX_SIZE) {
-            listInBytes = new byte[MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES * numOfPairs];
+            listInBytes = new byte[MiscTools.PAIR_OF_INT_SIZE_IN_BYTES * numOfPairs];
             int writeToByteArrayOffset = 0;
             for (TermIdReviewIdPair termIdReviewIdPair : termIdReviewIdPairs) {
                 insertPairToByteArray(listInBytes, writeToByteArrayOffset, termIdReviewIdPair);
-                writeToByteArrayOffset += MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES;
+                writeToByteArrayOffset += MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
             }
             termIdReviewIdPairs.clear(); // for the while loop in the calling function
         } else {
 //            System.out.println("<USED BUFFER WRITING>");
             int batchSize = getBatchSize(termIdReviewIdPairs.size()); // in pairs
-            int listInBytesSize = MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES * batchSize;
+            int listInBytesSize = MiscTools.PAIR_OF_INT_SIZE_IN_BYTES * batchSize;
             listInBytes = new byte[listInBytesSize];
             int writeToByteArrayOffset = 0;
             for (TermIdReviewIdPair termIdReviewIdPair : termIdReviewIdPairs) {
@@ -120,7 +120,7 @@ public class TermToReviewBlockWriter {
                 }
                 insertPairToByteArray(listInBytes, writeToByteArrayOffset, termIdReviewIdPair);
 //                iterator.remove();
-                writeToByteArrayOffset += MiscUtils.PAIR_OF_INT_SIZE_IN_BYTES;
+                writeToByteArrayOffset += MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
             }
             if (batchSize > 0) {
                 termIdReviewIdPairs.subList(0, batchSize).clear();
@@ -138,7 +138,7 @@ public class TermToReviewBlockWriter {
     }
 
     private static void insertPairToByteArray(byte[] insertTo, int offset, TermIdReviewIdPair termIdReviewIdPair) {
-        final int INTEGER_SIZE = MiscUtils.INTEGER_SIZE;
+        final int INTEGER_SIZE = MiscTools.INTEGER_SIZE;
         byte[] tidArray = ByteBuffer.allocate(4).putInt(termIdReviewIdPair.tid).array();
         byte[] ridArray = ByteBuffer.allocate(4).putInt(termIdReviewIdPair.rid).array();
         System.arraycopy(tidArray, 0, insertTo, offset, INTEGER_SIZE);

@@ -1,15 +1,15 @@
 package dynamic_index.index_reading;
 
 
-import dynamic_index.global_util.IndexInvalidationUtil;
-import dynamic_index.global_util.MiscUtils;
+import dynamic_index.global_tools.IndexInvalidationTool;
+import dynamic_index.global_tools.MiscTools;
 import dynamic_index.index_structure.FrontCodeBlock;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-import static dynamic_index.global_util.LengthPrecodedVarintCodec.decodeBytesToIntegers;
+import static dynamic_index.global_tools.LengthPrecodedVarintCodec.decodeBytesToIntegers;
 
 
 
@@ -48,7 +48,7 @@ public class SingleIndexReader {
         FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE =
                 (FrontCodeBlock.BYTES_IN_WORD_BLOCK * NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK);
         FRONT_CODE_ROW_SIZE_IN_BYTES =
-                MiscUtils.INTEGER_SIZE + FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
+                MiscTools.INTEGER_SIZE + FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
     }
 
     public TreeMap<Integer, Integer> getReviewsWithWord(String word) {
@@ -101,7 +101,7 @@ public class SingleIndexReader {
            in the block of a string, since it is possible that the first letter
            is not a prefix of some word in the block.
         */
-        final int intSize = MiscUtils.INTEGER_SIZE;
+        final int intSize = MiscTools.INTEGER_SIZE;
         int pointerToBlockInString = ByteBuffer.wrap(indexDictionary, middleInBytes, intSize).getInt();
         byte[] blockData = new byte[FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE];
         System.arraycopy(indexDictionary, middleInBytes + intSize, blockData, 0, FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE);
@@ -121,7 +121,7 @@ public class SingleIndexReader {
             byte length = blockData[i];
             byte prefixLength = blockData[i + 1];
             int freqPointer = ByteBuffer.wrap(blockData, i + TWO_BYTES_READ, Integer.BYTES).getInt();
-            int FREQ_LEN_OFFSET = MiscUtils.INTEGER_SIZE + 2 * Byte.BYTES;
+            int FREQ_LEN_OFFSET = MiscTools.INTEGER_SIZE + 2 * Byte.BYTES;
             int freqLength = ByteBuffer.wrap(blockData, i + FREQ_LEN_OFFSET, Integer.BYTES).getInt();
             assert length >= prefixLength: "token: " + tokenToFind;
             byte suffixLength = (byte) (length - prefixLength);
@@ -133,13 +133,13 @@ public class SingleIndexReader {
             if (i == 0) {  // first word in block
                 readWordToStringBuilder(totalCharReadInString, length, firstWord);
                 wordToPointerAndLength.put(firstWord.toString(),
-                        new TokenMetaData(freqPointer, freqLength, tokenNumberInDictionary));
+                        new TokenMetaData(freqPointer, freqLength));
                 totalCharReadInString += length;
             } else {
                 StringBuilder currentWord = new StringBuilder(firstWord.substring(0, prefixLength));
                 readWordToStringBuilder(totalCharReadInString, suffixLength, currentWord);
                 wordToPointerAndLength.put(currentWord.toString(),
-                        new TokenMetaData(freqPointer, freqLength, tokenNumberInDictionary));
+                        new TokenMetaData(freqPointer, freqLength));
                 totalCharReadInString += suffixLength;
             }
         }
@@ -178,8 +178,8 @@ public class SingleIndexReader {
         byte[] rowToReadInto = getBytesOfInvertedIndexRAF(pointerAndLength);
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
-        if(IndexInvalidationUtil.isInvalidationDirty()){ // no querying when there has been no deletion
-            IndexInvalidationUtil.filterResults(mainIndexDirectory.getAbsolutePath(), results);
+        if(IndexInvalidationTool.isInvalidationDirty()){ // no querying when there has been no deletion
+            IndexInvalidationTool.filterResults(mainIndexDirectory.getAbsolutePath(), results);
         }
         return results;
     }
@@ -187,8 +187,8 @@ public class SingleIndexReader {
     TreeMap<Integer, Integer> getRidToFreqMapFromRawInvertedIndex(byte[] rowToReadInto) {
         List<Integer> integersInBytesRow = decodeBytesToIntegers(rowToReadInto);
         TreeMap<Integer, Integer> results =  getMapFromListOfIntegers(integersInBytesRow);
-        if(IndexInvalidationUtil.isInvalidationDirty()){ // no querying when there has been no deletion
-            IndexInvalidationUtil.filterResults(mainIndexDirectory.getAbsolutePath(), results);
+        if(IndexInvalidationTool.isInvalidationDirty()){ // no querying when there has been no deletion
+            IndexInvalidationTool.filterResults(mainIndexDirectory.getAbsolutePath(), results);
         }
         return results;
     }

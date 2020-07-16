@@ -13,8 +13,9 @@ abstract public class Experiment {
 
     final String AUXILIARY_INDEX_DIR_PATTERN = "aux";
     public PrintWriter tlog = null;
-    public int inputScale = 1;
+    public final int inputScale;
     final String allIndexesDirectory;
+    @SuppressWarnings("unused")
     final String indexParentDirectory;
     final ScalingCases scalingCases;
 

@@ -12,8 +12,7 @@ class TokenMetaData {
     //the following is only to get meta data by numbering the words in the dictionary
 
     TokenMetaData(int freqPointer,
-                          int freqLength,
-                          int tokenId) {
+                  int freqLength) {
         this.freqPointer = freqPointer;
         this.freqLength = freqLength;
     }

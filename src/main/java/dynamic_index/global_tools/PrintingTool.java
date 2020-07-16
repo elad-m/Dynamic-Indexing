@@ -1,11 +1,11 @@
-package dynamic_index.global_util;
+package dynamic_index.global_tools;
 
 import java.io.PrintWriter;
 
 /**
  * Takes care of printing utilities.
  */
-public final class PrintingUtil {
+public final class PrintingTool {
 
     //=========================  Printing  =====================================//
 

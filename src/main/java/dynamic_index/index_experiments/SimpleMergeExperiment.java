@@ -2,8 +2,8 @@ package dynamic_index.index_experiments;
 
 import dynamic_index.IndexReader;
 import dynamic_index.IndexWriter;
-import dynamic_index.global_util.PrintingUtil;
-import dynamic_index.global_util.MiscUtils;
+import dynamic_index.global_tools.PrintingTool;
+import dynamic_index.global_tools.MiscTools;
 
 import java.io.File;
 import java.util.Enumeration;
@@ -16,7 +16,7 @@ public class SimpleMergeExperiment extends Experiment {
 
     public SimpleMergeExperiment(String localDir, int inputScale) {
         super(localDir,
-                localDir + File.separatorChar + MiscUtils.INDEXES_DIR_NAME,
+                localDir + File.separatorChar + MiscTools.INDEXES_DIR_NAME,
                 inputScale,
                 false);
     }
@@ -33,7 +33,7 @@ public class SimpleMergeExperiment extends Experiment {
         indexReader = insertToIndex(indexWriter);
         queryAfterInsert(indexReader);
 
-        deleteReviews(indexWriter);
+        indexReader = deleteReviews(indexWriter);
         queryAfterDelete(indexReader);
 
         indexReader = mergeIndex(allIndexesDirectory, indexWriter, indexReader);
@@ -46,7 +46,7 @@ public class SimpleMergeExperiment extends Experiment {
         long startTime = System.currentTimeMillis();
         System.out.println("=====\n" + "Merging All Indexes " + "\n=====");
         indexWriter.merge(indexReader);
-        PrintingUtil.printElapsedTimeToLog(tlog, startTime, "\n\tIndex Merging");
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, "\n\tIndex Merging");
         return new IndexReader(indexDirectory);
     }
 
@@ -55,14 +55,17 @@ public class SimpleMergeExperiment extends Experiment {
     }
 
 
-    private void deleteReviews(IndexWriter indexWriter) {
+    private IndexReader deleteReviews(IndexWriter indexWriter) {
         System.out.println("=====\n" + "Index deletion " + "\n=====");
         indexWriter.removeReviews(allIndexesDirectory, scalingCases.getDelReviews());
+        return new IndexReader(allIndexesDirectory);
     }
 
     private void queryAfterDelete(IndexReader indexReader) {
         tlog.println("===== words after deleted reviews... =====");
-        testGetReviewsWithToken(indexReader, scalingCases.getWordQueries());
+        testWordQueries(indexReader, scalingCases.getWordQueries());
+        testMetaData(indexReader);
+        testReviewMetaData(indexReader);
     }
 
     private IndexReader insertToIndex(IndexWriter indexWriter) {
@@ -80,36 +83,55 @@ public class SimpleMergeExperiment extends Experiment {
     private void insertToIndex(IndexWriter indexWriter, String auxIndexDirectoryName, String rawDataFilename) {
         long startTime = System.currentTimeMillis();
         indexWriter.insert(rawDataFilename, auxIndexDirectoryName);
-        PrintingUtil.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
     }
 
     private void queryAfterInsert(IndexReader indexReader){
         tlog.println("===== words inserted queries... =====");
-        testGetReviewsWithToken(indexReader, scalingCases.getWordQueries());
+        testWordQueries(indexReader, scalingCases.getWordQueries());
+        testMetaData(indexReader);
+        testReviewMetaData(indexReader);
     }
 
     private IndexWriter buildIndex() {
         long startTime = System.currentTimeMillis();
         IndexWriter indexWriter = new IndexWriter(allIndexesDirectory, inputScale);
-        indexWriter.constructIndex(scalingCases.getInputFilename(), allIndexesDirectory);
-        PrintingUtil.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
+        indexWriter.sortAndConstructIndex(scalingCases.getInputFilename());
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
         return indexWriter;
     }
 
     private void queryAfterBuildIndex(IndexReader indexReader) {
         tlog.println("===== After Build/Merge... =====");
-        tlog.println("===== words in index queries... =====");
-        testGetReviewsWithToken(indexReader, scalingCases.getWordQueries());
-        tlog.println("===== words not in index queries... =====");
-        testGetReviewsWithToken(indexReader, scalingCases.getNegWordQueries());
+        testWordQueries(indexReader, scalingCases.getWordQueries());
+        testMetaData(indexReader);
+        testReviewMetaData(indexReader);
     }
 
-    private void testGetReviewsWithToken(IndexReader indexReader,
-                                         String[] wordTestCases) {
+    private void testWordQueries(IndexReader indexReader,
+                                 String[] wordTestCases) {
         for (String word : wordTestCases) {
             Enumeration<Integer> res = indexReader.getReviewsWithToken(word);
-            tlog.print(word + ": " + System.lineSeparator());
+            tlog.println(word + ":");
             printEnumeration(res);
+            tlog.println("#mentions: " + indexReader.getNumberOfMentions(word));
+            tlog.println("#reviews: " + indexReader.getNumberOfReviews(word));
+        }
+    }
+
+    private void testMetaData(IndexReader indexReader){
+        tlog.println("#Reviews: " + indexReader.getNumberOfReviews());
+        tlog.println("#Tokens: " + indexReader.getTotalNumberOfTokens());
+    }
+
+    private void testReviewMetaData(IndexReader indexReader) {
+        for (int rid : scalingCases.getMetaRev()) {
+            tlog.println("rid: " + rid + " " +
+                    indexReader.getProductId(rid) + " " +
+                    indexReader.getReviewScore(rid) + " " +
+                    indexReader.getReviewHelpfulnessNumerator(rid) + " " +
+                    indexReader.getReviewHelpfulnessDenominator(rid) + " " +
+                    indexReader.getReviewLength(rid));
         }
     }
 
@@ -118,14 +140,14 @@ public class SimpleMergeExperiment extends Experiment {
         tlog.println(numOfWords + " random queries...");
         String[] randomWords = getRandomWords(indexDirectoryName, numOfWords);
         long startReviewsWithToken = System.currentTimeMillis();
-        testGetReviewsWithToken(indexReader, randomWords);
-        PrintingUtil.printElapsedTimeToLog(tlog, startReviewsWithToken, numOfWords + " random getReviewsWithToken");
+        testWordQueries(indexReader, randomWords);
+        PrintingTool.printElapsedTimeToLog(tlog, startReviewsWithToken, numOfWords + " random getReviewsWithToken");
 
     }
 
     private String[] getRandomWords(String indexDirectoryName, int numOfWords) {
         File indexDirectory = new File(indexDirectoryName);
-        Map<Integer, String> wordIdToString = MiscUtils.loadMapFromFile(indexDirectory, MiscUtils.WORDS_MAPPING);
+        Map<Integer, String> wordIdToString = MiscTools.loadMapFromFile(indexDirectory, MiscTools.WORDS_MAPPING);
         String[] randomWords = new String[numOfWords];
         for (int i = 0; i < numOfWords; i++) {
             int randomNum = ThreadLocalRandom.current().nextInt(0, wordIdToString.size());

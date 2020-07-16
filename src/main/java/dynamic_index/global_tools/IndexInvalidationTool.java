@@ -1,4 +1,4 @@
-package dynamic_index.global_util;
+package dynamic_index.global_tools;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -6,13 +6,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
 
 /**
  * Handles index invalidating file and filtering.
  */
-public final class IndexInvalidationUtil {
+public final class IndexInvalidationTool {
 
     private static boolean invalidationDirty = false;
     private static final String INVALIDATION_FILENAME = "invalidation.bin";
@@ -67,13 +66,10 @@ public final class IndexInvalidationUtil {
         try {
             Path invalidationFilePath = getInvalidationFile(allIndexesDirectory).toPath();
             if(Files.exists(invalidationFilePath)){
-                Files.newInputStream(invalidationFilePath,
-                        StandardOpenOption.TRUNCATE_EXISTING);
+                Files.delete(getInvalidationFile(allIndexesDirectory).toPath());
+                Files.createFile(getInvalidationFile(allIndexesDirectory).toPath());
                 setInvalidationDirty(false);
             }
-
-//            Files.delete(getInvalidationFile(allIndexesDirectory).toPath());
-//            Files.createFile(getInvalidationFile(allIndexesDirectory).toPath());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -98,7 +94,12 @@ public final class IndexInvalidationUtil {
         return  new File(allIndexDirectory + File.separator + INVALIDATION_FILENAME);
     }
 
-    private static Set<Integer> getInvalidationSet(String allIndexDirectory) {
+    /**
+     * Returns all rids that has been deleted (invalidated)
+     * @param allIndexDirectory - the directory where all the index directories and files are.
+     * @return - a set of all rids that has been deleted (invalidated)
+     */
+    public static Set<Integer> getInvalidationSet(String allIndexDirectory) {
         if(!invalidationDirty){
             return new HashSet<>();
         }

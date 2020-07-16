@@ -1,6 +1,6 @@
 package dynamic_index;
 
-import dynamic_index.global_util.MiscUtils;
+import dynamic_index.global_tools.MiscTools;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,14 +10,13 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.SortedMap;
 
-import static dynamic_index.global_util.MiscUtils.TERM_MAP_FILE_DEBUG;
-import static dynamic_index.global_util.MiscUtils.WORDS_MAPPING;
+import static dynamic_index.global_tools.MiscTools.TERM_MAP_FILE_DEBUG;
+import static dynamic_index.global_tools.MiscTools.WORDS_MAPPING;
 
 
 public class IndexRemover {
 
     private boolean useExceptions = false;
-    private String wordsMappingFilename =WORDS_MAPPING + TERM_MAP_FILE_DEBUG;
 
     void removeFilesAfterMerge(String dir) {
         useExceptions = true;
@@ -77,7 +76,7 @@ public class IndexRemover {
     private void deleteDirectoryWithExceptions(File toDelete) {
         try {
             // not deleting the merged index directory and files
-            if (!toDelete.getName().equals(MiscUtils.MERGED_INDEX_DIRECTORY)) {
+            if (!toDelete.getName().equals(MiscTools.MERGED_INDEX_DIRECTORY)) {
                 File[] childFiles = toDelete.listFiles();
                 if (childFiles != null) {
                     if (childFiles.length == 0) { //Directory is empty. Proceed for deletion
@@ -87,7 +86,7 @@ public class IndexRemover {
                             deleteFileOrDirectory(childFilePath);
                         }
                         // not deleting the indexes directory itself after deleting its contents
-                        if (!toDelete.getName().equals(MiscUtils.INDEXES_DIR_NAME)) {
+                        if (!toDelete.getName().equals(MiscTools.INDEXES_DIR_NAME)) {
                             deleteDirectory(toDelete); // calling again, now should be empty
                         }
                     }
@@ -117,7 +116,9 @@ public class IndexRemover {
     }
 
     private boolean shouldDeleteFile(String fileName){
-        return !fileName.equals(MiscUtils.INVALIDATION_FILENAME) &&
+        String wordsMappingFilename = WORDS_MAPPING + TERM_MAP_FILE_DEBUG;
+        return !fileName.equals(MiscTools.INVALIDATION_FILENAME) &&
+                !fileName.equals(MiscTools.REVIEW_META_DATA_FILENAME) &&
                 !fileName.equals(wordsMappingFilename);
     }
 

@@ -42,10 +42,6 @@ public class InvertedIndexesToMerge implements WritingMeasurable{
     public void writeTo(BufferedOutputStream invertedOutputStream) {
         int lastRid = 0;
         // writing all rids
-//        if(word.equals("a")
-//                && firstRidToInvertedIndex.size() > 0
-//                && firstRidToInvertedIndex.firstKey() == 1)
-//            System.out.println("here");
         for(InvertedIndex invertedIndex: firstRidToInvertedIndex.values()){
             lastRid = invertedIndex.writeCompressedRidsTo(invertedOutputStream, lastRid);
             if(lastRid > 13000){
@@ -62,5 +58,13 @@ public class InvertedIndexesToMerge implements WritingMeasurable{
     @Override
     public int getNumberOfBytesWrittenToOutput() {
         return amountOfBytesWrittenExternalOutput;
+    }
+
+    @Override
+    public String toString() {
+        return "InvertedIndexesToMerge{" +
+                "word='" + word + '\'' +
+                ", firstRidToInvertedIndex=" + firstRidToInvertedIndex +
+                '}';
     }
 }

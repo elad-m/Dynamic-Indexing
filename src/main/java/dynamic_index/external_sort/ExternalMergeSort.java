@@ -1,6 +1,6 @@
 package dynamic_index.external_sort;
 
-import dynamic_index.global_util.MiscUtils;
+import dynamic_index.global_tools.MiscTools;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class ExternalMergeSort {
 
     private void renameFinalFile(File sortedFileToRename) {
         File parentOfSortedFileToRename = sortedFileToRename.getParentFile();
-        File renamedFile = new File(indexDirectory + File.separator + MiscUtils.WORDS_SORTED_FILE_NAME);
+        File renamedFile = new File(indexDirectory + File.separator + MiscTools.WORDS_SORTED_FILE_NAME);
         try {
             Files.move(sortedFileToRename.toPath(), renamedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             Files.delete(parentOfSortedFileToRename.toPath());
