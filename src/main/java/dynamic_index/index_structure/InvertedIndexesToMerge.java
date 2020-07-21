@@ -44,9 +44,6 @@ public class InvertedIndexesToMerge implements WritingMeasurable{
         // writing all rids
         for(InvertedIndex invertedIndex: firstRidToInvertedIndex.values()){
             lastRid = invertedIndex.writeCompressedRidsTo(invertedOutputStream, lastRid);
-            if(lastRid > 13000){
-                System.out.println("here");
-            }
         }
         //writing all frequencies
         for(InvertedIndex invertedIndex: firstRidToInvertedIndex.values()){

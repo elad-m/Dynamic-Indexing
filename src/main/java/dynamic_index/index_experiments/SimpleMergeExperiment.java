@@ -2,13 +2,14 @@ package dynamic_index.index_experiments;
 
 import dynamic_index.IndexReader;
 import dynamic_index.IndexWriter;
-import dynamic_index.global_tools.PrintingTool;
+import dynamic_index.LogMergeIndexWriter;
 import dynamic_index.global_tools.MiscTools;
+import dynamic_index.global_tools.PrintingTool;
 
 import java.io.File;
 import java.util.Enumeration;
-import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
+
+import static dynamic_index.global_tools.MiscTools.getRandomWords;
 
 
 public class SimpleMergeExperiment extends Experiment {
@@ -30,17 +31,39 @@ public class SimpleMergeExperiment extends Experiment {
         IndexReader indexReader = new IndexReader(allIndexesDirectory);
         queryAfterBuildIndex(indexReader);
 
-        indexReader = insertToIndex(indexWriter);
-        queryAfterInsert(indexReader);
+//        indexReader = insertToIndex(indexWriter);
+//        queryAfterInsert(indexReader);
+//
+//        indexReader = deleteReviews(indexWriter);
+//        queryAfterDelete(indexReader);
+//        runRandomQueries(indexReader, 50);
 
-        indexReader = deleteReviews(indexWriter);
-        queryAfterDelete(indexReader);
+//        indexReader = mergeIndex(allIndexesDirectory, indexWriter, indexReader);
+//        queryAfterMerge(indexReader);
 
-        indexReader = mergeIndex(allIndexesDirectory, indexWriter, indexReader);
-        queryAfterMerge(indexReader);
-
+//        runRandomQueries(indexReader, 50);
         tlog.close();
     }
+
+    private void runRandomQueries(IndexReader indexReader, int numOfWords) {
+
+        tlog.println(numOfWords + " random queries...");
+        String[] randomWords = getRandomWords(allIndexesDirectory, numOfWords);
+        long startReviewsWithToken = System.currentTimeMillis();
+        testGetReviewsWithToken(indexReader, randomWords);
+        PrintingTool.printElapsedTimeToLog(tlog,
+                startReviewsWithToken,
+                numOfWords + " random getReviewsWithToken");
+    }
+
+    private void testGetReviewsWithToken(IndexReader indexReader, String[] words){
+        for (String word : words) {
+            Enumeration<Integer> res = indexReader.getReviewsWithToken(word);
+            tlog.println(word + ":");
+            printEnumeration(res);
+        }
+    }
+
 
     private IndexReader mergeIndex(String indexDirectory, IndexWriter indexWriter, IndexReader indexReader) {
         long startTime = System.currentTimeMillis();
@@ -86,7 +109,7 @@ public class SimpleMergeExperiment extends Experiment {
         PrintingTool.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction");
     }
 
-    private void queryAfterInsert(IndexReader indexReader){
+    private void queryAfterInsert(IndexReader indexReader) {
         tlog.println("===== words inserted queries... =====");
         testWordQueries(indexReader, scalingCases.getWordQueries());
         testMetaData(indexReader);
@@ -119,7 +142,7 @@ public class SimpleMergeExperiment extends Experiment {
         }
     }
 
-    private void testMetaData(IndexReader indexReader){
+    private void testMetaData(IndexReader indexReader) {
         tlog.println("#Reviews: " + indexReader.getNumberOfReviews());
         tlog.println("#Tokens: " + indexReader.getTotalNumberOfTokens());
     }
@@ -135,24 +158,4 @@ public class SimpleMergeExperiment extends Experiment {
         }
     }
 
-
-    private void queryRandomWords(String indexDirectoryName, IndexReader indexReader, int numOfWords) {
-        tlog.println(numOfWords + " random queries...");
-        String[] randomWords = getRandomWords(indexDirectoryName, numOfWords);
-        long startReviewsWithToken = System.currentTimeMillis();
-        testWordQueries(indexReader, randomWords);
-        PrintingTool.printElapsedTimeToLog(tlog, startReviewsWithToken, numOfWords + " random getReviewsWithToken");
-
-    }
-
-    private String[] getRandomWords(String indexDirectoryName, int numOfWords) {
-        File indexDirectory = new File(indexDirectoryName);
-        Map<Integer, String> wordIdToString = MiscTools.loadMapFromFile(indexDirectory, MiscTools.WORDS_MAPPING);
-        String[] randomWords = new String[numOfWords];
-        for (int i = 0; i < numOfWords; i++) {
-            int randomNum = ThreadLocalRandom.current().nextInt(0, wordIdToString.size());
-            randomWords[i] = (wordIdToString.get(randomNum));
-        }
-        return randomWords;
-    }
 }

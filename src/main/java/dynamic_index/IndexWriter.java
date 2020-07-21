@@ -76,7 +76,7 @@ public class IndexWriter {
             Map<Integer, String> wordTermIdToTerm;
 //            if (!SKIP_SORTING) {
                 constructTermToTermIDMapping(inputFile); // token and review counter complete
-                writeHashmapFor100Random();
+//                writeHashmapFor100Random();
                 firstSortIteration(inputFile, initialReviewCounter); // review counter resets, second input reading
                 externalSort();
                 wordTermIdToTerm = swapHashMapDirections(wordTermToTermID);
@@ -96,7 +96,7 @@ public class IndexWriter {
 
     private void writeHashmapFor100Random() {
         // adds to the same file at the main directory
-        writeMapToFile(wordTermToTermID, allIndexesDirectory, WORDS_MAPPING, inputScaleType);
+        writeMapToFile(wordTermToTermID, allIndexesDirectory);
     }
 
     private void constructTermToTermIDMapping(String inputFile) throws IOException {

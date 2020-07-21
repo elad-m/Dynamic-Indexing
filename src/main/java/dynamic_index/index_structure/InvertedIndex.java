@@ -17,7 +17,7 @@ import static dynamic_index.global_tools.LengthPrecodedVarintCodec.intToCompress
  */
 public class InvertedIndex implements WritingMeasurable {
 
-    public static int MAX_NUM_OF_PAIRS = 4096;
+    public static int MAX_NUM_OF_PAIRS = 500000; // 2^15
 
     private final String word;
     private final String indexName;

@@ -24,13 +24,14 @@ public class LogMergeIndexWriter {
 
     private final TemporaryIndex temporaryIndex;
     private final File allIndexesDirectory;
+    private final HashSet<String> terms = new HashSet<>();
 
     private ReviewsMetaDataIndexWriter reviewsMetaDataIndexWriter;
     private int reviewCounter = 1; // not necessarily the number of reviews in index in practice because deletion
 
-    public LogMergeIndexWriter(String allIndexesDirectory) {
+    public LogMergeIndexWriter(String allIndexesDirectory, int tempIndexSize) {
         this.allIndexesDirectory = createDirectory(allIndexesDirectory);
-        this.temporaryIndex = new TemporaryIndex();
+        this.temporaryIndex = new TemporaryIndex(tempIndexSize);
     }
 
     private void reinitializeReviewMetaDataWriter(){
@@ -55,7 +56,9 @@ public class LogMergeIndexWriter {
                 line = bufferedReaderOfRawInput.readLine();
             }
             bufferedReaderOfRawInput.close();
-            reinitializeReviewMetaDataWriter();
+            reviewsMetaDataIndexWriter.closeWriter();
+//            reinitializeReviewMetaDataWriter();
+//            writeSetToFile(terms, allIndexesDirectory);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -75,7 +78,7 @@ public class LogMergeIndexWriter {
                 break;
             case REVIEW_TEXT_FIELD:
                 reviewConcatFields.append(WHITE_SPACE_SEPARATOR).append(feedTextToIndexWriter(value));
-                if (reviewCounter % 1000 == 0) {
+                if (reviewCounter % 100000 == 0) {
                     System.out.println(reviewCounter);
                 }
                 reviewsMetaDataIndexWriter.writeData(reviewConcatFields.toString());
@@ -94,6 +97,7 @@ public class LogMergeIndexWriter {
                 .filter(s -> s.length() <= WORD_MAX_SIZE)
                 .collect(Collectors.toList());
         addReviewToTemporaryIndex(noBigWords);
+        terms.addAll(noBigWords);
         return noBigWords.size();
     }
 
@@ -147,7 +151,12 @@ public class LogMergeIndexWriter {
     private class TemporaryIndex {
 
         private final TreeMap<String, InvertedIndex> wordToInvertedIndexMap = new TreeMap<>();
-        private final int TEMPORARY_INDEX_SIZE = 4096;
+        private int sizeOfTemporaryIndex = 0;
+        private final int TEMPORARY_INDEX_SIZE;
+
+        public TemporaryIndex(int tempIndexSize) {
+            TEMPORARY_INDEX_SIZE = tempIndexSize;
+        }
 
         private void add(String word, int freqForRid, int rid) {
             if (wordToInvertedIndexMap.containsKey(word)) {
@@ -156,11 +165,14 @@ public class LogMergeIndexWriter {
                 InvertedIndex invertedIndex = new InvertedIndex(word, rid, freqForRid, allIndexesDirectory);
                 wordToInvertedIndexMap.put(word, invertedIndex);
             }
-            // this method increases the size below by 1
-            if (getQueueSize() == TEMPORARY_INDEX_SIZE) {
+            sizeOfTemporaryIndex++;
+            // this method increases the queue size by 1
+            if(sizeOfTemporaryIndex == TEMPORARY_INDEX_SIZE){
+//            if (getQueueSize() == TEMPORARY_INDEX_SIZE) {
                 try {
                     writeTemporaryIndex();
                     wordToInvertedIndexMap.clear();
+                    sizeOfTemporaryIndex = 0;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

@@ -1,12 +1,17 @@
 package dynamic_index.index_experiments;
 
+import dynamic_index.IndexReader;
 import dynamic_index.IndexRemover;
 import dynamic_index.ScalingCases;
+import dynamic_index.global_tools.MiscTools;
+import dynamic_index.global_tools.PrintingTool;
 
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Enumeration;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 
 abstract public class Experiment {
@@ -25,8 +30,6 @@ abstract public class Experiment {
         this.inputScale = inputScale;
         this.scalingCases = new ScalingCases(this.inputScale, logMergeType);
     }
-
-
 
     public abstract void runExperiment();
 

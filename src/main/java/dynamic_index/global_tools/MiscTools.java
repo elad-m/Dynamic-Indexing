@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("SpellCheckingInspection")
@@ -116,21 +117,26 @@ public final class MiscTools {
 
     //=========================  Writing for Meta and Testing  =====================================//
 
+    public static String[] getRandomWords(String indexDirectoryName, int numOfWords) {
+        File indexDirectory = new File(indexDirectoryName);
+        Map<Integer, String> wordIdToString = MiscTools.loadMapFromFile(indexDirectory, MiscTools.WORDS_MAPPING);
+        String[] randomWords = new String[numOfWords];
+        for (int i = 0; i < numOfWords; i++) {
+            int randomNum = ThreadLocalRandom.current().nextInt(0, wordIdToString.size());
+            randomWords[i] = (wordIdToString.get(randomNum));
+        }
+        return randomWords;
+    }
+
     public static void writeMapToFile(Map<String, Integer> wordTermToTermID,
-                                      File indexDirectory,
-                                      String mappingType,
-                                      int inputScaleType) {
+                                      File indexDirectory) {
         System.out.println("writing hashmap...");
         TreeMap<String, Integer> orderedTermMapping = new TreeMap<>(wordTermToTermID);
         try {
             FileWriter fw = new FileWriter(indexDirectory.getPath() + File.separator
-                    + mappingType + TERM_MAP_FILE_DEBUG, true);
+                    + TERM_MAP_FILE_DEBUG, true);
             for (Map.Entry<String, Integer> entry : orderedTermMapping.entrySet()) {
-                fw.write(entry.getKey());
-                fw.write(' ');
-                fw.write(entry.getValue().toString());
-                fw.write(';');
-                fw.write('\n');
+                writeEntry(fw, entry.getKey(), entry.getValue());
             }
             fw.flush();
             fw.close();
@@ -139,7 +145,34 @@ public final class MiscTools {
         }
     }
 
-    public static Map<Integer, String> loadMapFromFile(File indexDirectory, String typeOfMapping) {
+    public static void writeSetToFile(Set<String> words,
+                                      File indexDirectory) {
+        System.out.println("writing all different words...");
+        try {
+            FileWriter fw = new FileWriter(indexDirectory.getPath() + File.separator
+                    + TERM_MAP_FILE_DEBUG, true);
+            int wordsCounter = 1;
+            for (String word : words) {
+                writeEntry(fw, word, wordsCounter);
+                wordsCounter++;
+            }
+            fw.flush();
+            fw.close();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+    }
+
+    private static void writeEntry(FileWriter fw, String word, Integer number) throws IOException {
+        fw.write(word);
+        fw.write(' ');
+        fw.write(number.toString());
+        fw.write(';');
+        fw.write('\n');
+
+    }
+
+    private static Map<Integer, String> loadMapFromFile(File indexDirectory, String typeOfMapping) {
         File mapFile = new File(indexDirectory.getPath() + File.separator
                 + typeOfMapping + TERM_MAP_FILE_DEBUG);
         Map<Integer, String> loadedMap = new HashMap<>(1000000);
@@ -157,6 +190,7 @@ public final class MiscTools {
         }
         return loadedMap;
     }
+
 
     public static <T> void printList(List<T> list, File indexPath, String name) {
         try {

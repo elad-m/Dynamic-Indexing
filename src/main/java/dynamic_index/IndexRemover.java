@@ -116,10 +116,14 @@ public class IndexRemover {
     }
 
     private boolean shouldDeleteFile(String fileName){
-        String wordsMappingFilename = WORDS_MAPPING + TERM_MAP_FILE_DEBUG;
-        return !fileName.equals(MiscTools.INVALIDATION_FILENAME) &&
-                !fileName.equals(MiscTools.REVIEW_META_DATA_FILENAME) &&
-                !fileName.equals(wordsMappingFilename);
+        if(useExceptions){
+            String wordsMappingFilename = WORDS_MAPPING + TERM_MAP_FILE_DEBUG;
+            return !fileName.equals(MiscTools.INVALIDATION_FILENAME) &&
+                    !fileName.equals(MiscTools.REVIEW_META_DATA_FILENAME) &&
+                    !fileName.equals(wordsMappingFilename);
+        } else {
+            return true;
+        }
     }
 
 }
