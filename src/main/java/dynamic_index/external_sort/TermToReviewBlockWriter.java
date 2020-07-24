@@ -18,14 +18,12 @@ public class TermToReviewBlockWriter {
     private final List<TermIdReviewIdPair> termIdReviewIdPairs;
     public final int BLOCK_SIZE_IN_INT_PAIRS;
     public final int BLOCK_SIZE_IN_BYTES;
-    public final String TERM_TYPE;
 
     int numOfFilesCreated = 0;
     private BufferedOutputStream currentFileBOF;
     File mergeFilesDirectory;
 
-    public TermToReviewBlockWriter(String indexDirectory, int numOfTokens, String termType) {
-        TERM_TYPE = termType;
+    public TermToReviewBlockWriter(String indexDirectory, int numOfTokens) {
         BLOCK_SIZE_IN_INT_PAIRS = estimateBestSizeOfWordsBlocks(numOfTokens, false);
         BLOCK_SIZE_IN_BYTES = BLOCK_SIZE_IN_INT_PAIRS * MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
         termIdReviewIdPairs = new ArrayList<>(BLOCK_SIZE_IN_INT_PAIRS);
@@ -43,7 +41,7 @@ public class TermToReviewBlockWriter {
 
     private void createMergeFilesDirectory(String indexDirectory) {
         final String TEMP_FILE_STORE = indexDirectory + File.separator
-                + TERM_TYPE + MiscTools.MERGE_FILES_DIRECTORY_NAME + "0";
+                +  MiscTools.MERGE_FILES_DIRECTORY_NAME + "0";
         this.mergeFilesDirectory = createDirectory(TEMP_FILE_STORE);
     }
 

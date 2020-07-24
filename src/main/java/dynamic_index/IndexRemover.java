@@ -11,8 +11,6 @@ import java.nio.file.Path;
 import java.util.SortedMap;
 
 import static dynamic_index.global_tools.MiscTools.TERM_MAP_FILE_DEBUG;
-import static dynamic_index.global_tools.MiscTools.WORDS_MAPPING;
-
 
 public class IndexRemover {
 
@@ -117,10 +115,9 @@ public class IndexRemover {
 
     private boolean shouldDeleteFile(String fileName){
         if(useExceptions){
-            String wordsMappingFilename = WORDS_MAPPING + TERM_MAP_FILE_DEBUG;
             return !fileName.equals(MiscTools.INVALIDATION_FILENAME) &&
                     !fileName.equals(MiscTools.REVIEW_META_DATA_FILENAME) &&
-                    !fileName.equals(wordsMappingFilename);
+                    !fileName.equals(TERM_MAP_FILE_DEBUG);
         } else {
             return true;
         }

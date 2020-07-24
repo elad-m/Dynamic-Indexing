@@ -1,6 +1,10 @@
 package dynamic_index;
 
+import dynamic_index.global_tools.MiscTools;
+
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 @SuppressWarnings("SpellCheckingInspection")
 public class ScalingCases {
@@ -17,8 +21,10 @@ public class ScalingCases {
     final int[] delReviews1 = new int[]{1, 5, 10, 11, 13};
     final int[] metaReview1 = new int[]{-1, 20, 0, 1, 16, 13};
 
-    final String[] we4 = {"zzzzzzzzzzzzzzzzz", "koreaa", "0", "zzzzzzzzzzzzzz", "korea", "1", "a", "the", "africanism", "grotta", "acheerleader",
-            "slinkyness", "amazoni", "epesode", "zaius"};
+    final String[] we4 = {"zzzzzzzzzzzzzzzzz", "koreaa", "0", "zzzzzzzzzzzzzz", "a"};
+    //,
+//            "africanism", "grotta", "acheerleader",
+//            "slinkyness", "amazoni", "epesode", "zaius"};
     final String[] inse4 = {"africanism", "grotta", "acheerleader", "slinkyness", "amazoni", "epesode", "zaius"};
     final String[] delWordse4 = {"africanism", "slinkyness", "zaius"};
     final int[] delReviews4 = new int[]{6556, 10776, 11782, 12238, 1, 10, 500, 10000, 12999, 13000, 10090, 11420};
@@ -36,16 +42,24 @@ public class ScalingCases {
     final int[] delReviews6 = new int[]{};
     final int[] metaReview6 = {1000001, 0, -2, 1, 1000000, 500000};
 
+    final String[] we7 = {"0", "zzzzzzzzzzzzzz", "kohut", "1", "out"};
+    final String[] inse7 = {};
+    final String[] delWords7 = {};
+    final int[] delReviews7 = new int[]{};
+    final int[] metaReview7 = {1000001, 0, -2, 1, 1000000, 500000};
+
 
     final String INSERTION_DIR_E1 = "E1TestResources";
+    static final String MOVIE_REVIEWS_4 = "constructE4.txt";
+    static final String MOVIE_REVIEWS_5 = "constructE5.txt";
     final String INSERTION_DIR_E4 = "E4TestResources";
     final String INSERTION_DIR_E5 = "E5TestResources";
 
     static final String MOVIE_REVIEWS_1 = "moviesE1.txt";
     static final String MOVIE_REVIEWS_2 = "moviesE2.txt";
     static final String MOVIE_REVIEWS_3 = "moviesE3.txt";
-    static final String MOVIE_REVIEWS_4 = "moviesE4.txt";
-    static final String MOVIE_REVIEWS_5 = "moviesE5.txt";
+//    static final String MOVIE_REVIEWS_4 = "moviesE4.txt";
+//    static final String MOVIE_REVIEWS_5 = "moviesE5.txt";
     static final String MOVIE_REVIEWS_6 =  "moviesE6.txt";
     static final String LOG_MOVIE_REVIEWS_1 = "logMoviesE1.txt";
     static final String LOG_MOVIE_REVIEWS_4 = "logMoviesE4.txt";
@@ -119,6 +133,7 @@ public class ScalingCases {
                 insertDirectory = new File(INSERTION_DIR_E5);
                 insertFiles = getInsertFileNames();
                 break;
+
             default:
                 inputFilename = "";
                 insertFiles = new File[0];
@@ -129,6 +144,14 @@ public class ScalingCases {
 
     public int[] getMetaRev() {
         return metaRev;
+    }
+
+    public List<Integer> getRandomRids(int numberOfReviewsToGet, int lower, int upper){
+        List<Integer> randomRids = new ArrayList<>();
+        for(int i =0; i < numberOfReviewsToGet; i++){
+            randomRids.add(MiscTools.getRandomNumber(lower, upper));
+        }
+        return randomRids;
     }
 
     private File[] getInsertFileNames() {

@@ -21,6 +21,7 @@ public class IndexReader {
     private File mainInvertedIndexFile;
     private final ReviewsMetaDataIndexReader reviewMetaDataIndexReader;
 
+
     // main index data
     private byte[] mainIndexDictionary;
     private byte[] mainConcatString;
@@ -151,17 +152,27 @@ public class IndexReader {
     }
 
     //======================= Querying (Reading)  =======================//
+
     /**
      * Return a series of integers of the form id-1, freq-1, id-2, freq-2, ... such
      * that id-n is the n-th review containing the given token and freq-n is the
      * number of times that the token appears in review id-n
      * Note that the integers should be sorted by id
-     * <p>
-     * Returns an empty Enumeration if there are no reviews containing this token
+     *
+     * If index writer is a log-merge one, then we also union on the in-memory index of it as well.
+     * @param token - token to find its postings list.
+     * @param indexWriter - index writer.
+     * @return  Returns an empty Enumeration if there are no reviews containing this token
      */
-    public Enumeration<Integer> getReviewsWithToken(String token) {
-        Map<Integer, Integer> unionOfResults = getPostingsListOfToken(token);
-        return mapToEnumeration(unionOfResults);
+    public Enumeration<Integer> getReviewsWithToken(String token,
+                                                    IndexWriter indexWriter){
+        Map<Integer, Integer>  postingList;
+        if(indexWriter instanceof LogMergeIndexWriter){
+            postingList = getPostingsListOfToken(token, (LogMergeIndexWriter)indexWriter);
+        } else {
+            postingList = getPostingsListOfToken(token);
+        }
+        return mapToEnumeration(postingList);
     }
 
     private Map<Integer,Integer> getPostingsListOfToken(String token){
@@ -169,19 +180,6 @@ public class IndexReader {
         addMainIndexResults(unionOfResults, token);
         addAuxIndexesResults(unionOfResults, token);
         return unionOfResults;
-    }
-
-    /**
-     * The same as {@link #getReviewsWithToken(String)} ()} but here we use also an in-memory index.
-     * This method should be called when using logMerge indexing.
-     * @param token - token to find its postings list.
-     * @param logMergeIndexWriter - i.e. index writer using LogMerging, since it holds in-memory index
-     * @return the same as above.
-     */
-    public Enumeration<Integer> getReviewsWithToken(String token,
-                                                    LogMergeIndexWriter logMergeIndexWriter){
-        Map<Integer, Integer>  postingList =getPostingsListOfToken(token, logMergeIndexWriter);
-        return mapToEnumeration(postingList);
     }
 
     private Map<Integer,Integer> getPostingsListOfToken(String token,
@@ -234,9 +232,10 @@ public class IndexReader {
      * The alternative of storing this data in a file in construction is impractical for
      * the deletion functionality: there is no efficient way to update a tokens #mentions
      * after deleting some review because the only way to know this token is in this review is
-     * to look for the token's postings list.
+     * to look for the token's postings list. So this would result in reading all the posting lists even for
+     * just one deleted review.
      *
-     * (you can also delete not only by number but also
+     * (One may also suggest deleting not only by number but also
      * by the review text itself but I decided this is not realistic).
      */
 

@@ -17,7 +17,7 @@ import java.util.TreeMap;
  * files. The source of data for this index is a huge file of pairs of (tid,rid) sorted by tid and
  * then by rid.
  */
-public class ExternalIndexWriter {
+public class WordsExternalIndexWriter {
 
     private final File indexDirectory;
     private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(MiscTools.STRING_BUILDER_DEFAULT_CAPACITY);
@@ -32,7 +32,7 @@ public class ExternalIndexWriter {
 
     private final Map<String, InvertedIndex> wordToInvertedIndex = new TreeMap<>();
 
-    public ExternalIndexWriter(File directoryPath) {
+    public WordsExternalIndexWriter(File directoryPath) {
         this.indexDirectory = directoryPath;
     }
 

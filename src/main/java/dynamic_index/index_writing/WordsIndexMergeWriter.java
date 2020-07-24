@@ -15,7 +15,7 @@ import java.util.TreeMap;
  * Writes a merge of all indexes using IndexMergingModerator as a source. Works in a similar way to
  * WordsIndexWriter.
  */
-public class IndexMergeWriter {
+public class WordsIndexMergeWriter {
 
     private final File mergedIndexDirectory;
     private StringBuilder allWordsSuffixConcatInBlock = new StringBuilder(MiscTools.STRING_BUILDER_DEFAULT_CAPACITY);
@@ -33,7 +33,7 @@ public class IndexMergeWriter {
      * Should be called when wanting to merge all indexes in a given directory.
      * @param allIndexesDirectory - the directory in which to merge all indexes.
      */
-    public IndexMergeWriter(String allIndexesDirectory) {
+    public WordsIndexMergeWriter(String allIndexesDirectory) {
         this.mergedIndexDirectory = MiscTools.createDirectory(allIndexesDirectory
                 + File.separator
                 + MiscTools.MERGED_INDEX_DIRECTORY);

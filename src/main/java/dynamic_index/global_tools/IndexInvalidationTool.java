@@ -11,10 +11,10 @@ import java.util.*;
 /**
  * Handles index invalidating file and filtering.
  */
-public final class IndexInvalidationTool {
+public class IndexInvalidationTool {
 
     private static boolean invalidationDirty = false;
-    private static final String INVALIDATION_FILENAME = "invalidation.bin";
+
 
     //=========================  invalidation method  =====================================//
 
@@ -32,9 +32,10 @@ public final class IndexInvalidationTool {
      * When there has been a merging of ALL index files, should be set to false.
      * @param setTo - boolean value according to above.
      */
-    private static void setInvalidationDirty(boolean setTo) {
+    public static void setInvalidationDirty(boolean setTo) {
         invalidationDirty = setTo;
     }
+
 
     /**
      * Add an array of rids to the invalidation file, which makes those reviews now considered deleted from
@@ -42,7 +43,7 @@ public final class IndexInvalidationTool {
      * @param allIndexDirectory - the directory where all the index directories and files are.
      * @param ridsToDelete - rids that would be written to the invalidation file.
      */
-    public static void addToInvalidationFile(String allIndexDirectory, int[] ridsToDelete) {
+    public static void addToInvalidationFile(String allIndexDirectory, List<Integer> ridsToDelete) {
         // encoding, appending
         try {
             File invalidationFile= getInvalidationFile(allIndexDirectory);
@@ -66,8 +67,8 @@ public final class IndexInvalidationTool {
         try {
             Path invalidationFilePath = getInvalidationFile(allIndexesDirectory).toPath();
             if(Files.exists(invalidationFilePath)){
-                Files.delete(getInvalidationFile(allIndexesDirectory).toPath());
-                Files.createFile(getInvalidationFile(allIndexesDirectory).toPath());
+                Files.delete(invalidationFilePath);
+                Files.createFile(invalidationFilePath);
                 setInvalidationDirty(false);
             }
         } catch (IOException e) {
@@ -91,7 +92,7 @@ public final class IndexInvalidationTool {
     }
 
     private static File getInvalidationFile(String allIndexDirectory){
-        return  new File(allIndexDirectory + File.separator + INVALIDATION_FILENAME);
+        return  new File(allIndexDirectory + File.separator + MiscTools.INVALIDATION_FILENAME);
     }
 
     /**

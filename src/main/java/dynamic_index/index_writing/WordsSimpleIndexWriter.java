@@ -12,7 +12,7 @@ import java.util.TreeMap;
  * Writes an index from an in-memory map into som directory.
  * No bulk reading from sorted file, no merging. Should be used for small index size (below 1000?)
  */
-public class SimpleIndexWriter {
+public class WordsSimpleIndexWriter {
 
     private final File indexOutputDirectory;
 
@@ -25,7 +25,7 @@ public class SimpleIndexWriter {
     private BufferedWriter bufferedStringConcatWriter;
     private final int numOfTokensInFrontCodeBlock = 8;
 
-    public SimpleIndexWriter(File indexOutputDirectory){
+    public WordsSimpleIndexWriter(File indexOutputDirectory){
         this.indexOutputDirectory = indexOutputDirectory;
     }
 

@@ -1,6 +1,7 @@
 package dynamic_index.index_experiments;
 
 import dynamic_index.IndexRemover;
+import dynamic_index.IndexWriter;
 import dynamic_index.LogMergeIndexWriter;
 import dynamic_index.IndexReader;
 import dynamic_index.global_tools.PrintingTool;
@@ -13,11 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static dynamic_index.global_tools.MiscTools.TERM_MAP_FILE_DEBUG;
-import static dynamic_index.global_tools.MiscTools.getRandomWords;
+import static dynamic_index.global_tools.MiscTools.*;
 
 
 public class LogMergeExperiment extends Experiment{
@@ -37,20 +36,30 @@ public class LogMergeExperiment extends Experiment{
         printDateAndTime();
         createTestLog("Log Merge ");
 
-        LogMergeIndexWriter logMergeIndexWriter = buildIndex();
+        IndexWriter logMergeIndexWriter = buildIndex();
         IndexReader indexReader = new IndexReader(allIndexesDirectory, true);
-        queryAfterBuildIndex(logMergeIndexWriter, indexReader);
+        queryAfterBuildIndex(indexReader, logMergeIndexWriter);
 
-//        indexReader = deleteReviews(logMergeIndexWriter);
-//        queryAfterDelete(logMergeIndexWriter, indexReader);
-//        runRandomQueries(logMergeIndexWriter, indexReader, 50);
-        long indexSize = getAllIndexSize((new File (allIndexesDirectory)).toPath());
-        tlog.println("total index size: " + indexSize);
+        indexReader = doInsertions(logMergeIndexWriter);
+
+//        long indexSize = getAllIndexSize((new File (allIndexesDirectory)).toPath());
+//        tlog.println("total index size: " + indexSize);
 
         IndexRemover indexRemover = new IndexRemover();
         indexRemover.removeAllIndexFiles(allIndexesDirectory);
 
         tlog.close();
+    }
+
+    private IndexWriter buildIndex(){
+        tlog.println("temporary index size: " + TEMP_INDEX_SIZE);
+
+        long startTime = System.currentTimeMillis();
+        LogMergeIndexWriter logMergeIndexWriter = new LogMergeIndexWriter(allIndexesDirectory,
+                TEMP_INDEX_SIZE);
+        logMergeIndexWriter.construct(scalingCases.getInputFilename());
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, LOG_FIRST_BUILD, NO_AVERAGE_ARGUMENT);
+        return logMergeIndexWriter;
     }
 
     public static long getAllIndexSize(Path path) {
@@ -87,89 +96,6 @@ public class LogMergeExperiment extends Experiment{
         }
 
         return size.get();
-    }
-
-
-
-    private LogMergeIndexWriter buildIndex(){
-        tlog.println("temporary index size: " + TEMP_INDEX_SIZE);
-        long startTime = System.currentTimeMillis();
-        LogMergeIndexWriter logMergeIndexWriter = new LogMergeIndexWriter(allIndexesDirectory,
-                TEMP_INDEX_SIZE);
-        logMergeIndexWriter.construct(scalingCases.getInputFilename());
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, "\n\tEntire index construction: Log-Merged");
-        return logMergeIndexWriter;
-    }
-
-    private void queryAfterBuildIndex(LogMergeIndexWriter logMergeIndexWriter, IndexReader indexReader) {
-        tlog.println("===== words in index queries... =====");
-        testWordQueries(logMergeIndexWriter, indexReader, scalingCases.getWordQueries());
-        testMetaData(indexReader);
-        testReviewMetaData(indexReader);
-    }
-
-    private void testWordQueries(LogMergeIndexWriter logMergeIndexWriter,
-                                 IndexReader indexReader,
-                                 String[] wordTestCases) {
-        for (String word : wordTestCases) {
-            Enumeration<Integer> res = indexReader.getReviewsWithToken(word, logMergeIndexWriter);
-            tlog.println(word + ":");
-            printEnumeration(res);
-            tlog.println("#mentions: " + indexReader.getNumberOfMentions(word, logMergeIndexWriter));
-            tlog.println("#reviews: " + indexReader.getNumberOfReviews(word, logMergeIndexWriter));
-        }
-    }
-
-    private void testMetaData(IndexReader indexReader){
-        tlog.println("#Reviews: " + indexReader.getNumberOfReviews());
-        tlog.println("#Tokens: " + indexReader.getTotalNumberOfTokens());
-    }
-
-    private void testReviewMetaData(IndexReader indexReader) {
-        for (int rid : scalingCases.getMetaRev()) {
-            tlog.println("rid: " + rid + " " +
-                    indexReader.getProductId(rid) + " " +
-                    indexReader.getReviewScore(rid) + " " +
-                    indexReader.getReviewHelpfulnessNumerator(rid) + " " +
-                    indexReader.getReviewHelpfulnessDenominator(rid) + " " +
-                    indexReader.getReviewLength(rid));
-        }
-    }
-
-
-    private IndexReader deleteReviews(LogMergeIndexWriter logMergeIndexWriter) {
-        System.out.println("=====\n" + "Index deletion " + "\n=====");
-        logMergeIndexWriter.removeReviews(allIndexesDirectory, scalingCases.getDelReviews());
-        return new IndexReader(allIndexesDirectory, true);
-    }
-
-    private void queryAfterDelete(LogMergeIndexWriter logMergeIndexWriter, IndexReader indexReader) {
-        tlog.println("===== words after deleted reviews... =====");
-        testWordQueries(logMergeIndexWriter, indexReader, scalingCases.getWordQueries());
-        testMetaData(indexReader);
-        testReviewMetaData(indexReader);
-    }
-
-
-    private void runRandomQueries(LogMergeIndexWriter logMergeIndexWriter, IndexReader indexReader, int numOfWords) {
-        tlog.println(numOfWords + " random queries...");
-        String[] randomWords = getRandomWords(allIndexesDirectory, numOfWords);
-        long startReviewsWithToken = System.currentTimeMillis();
-        testGetReviewsWithToken(logMergeIndexWriter, indexReader, randomWords);
-        PrintingTool.printElapsedTimeToLog(tlog,
-                startReviewsWithToken,
-                numOfWords + " random getReviewsWithToken");
-
-        tlog.close();
-    }
-
-
-    private void testGetReviewsWithToken(LogMergeIndexWriter logMergeIndexWriter, IndexReader indexReader, String[] words){
-        for (String word : words) {
-            Enumeration<Integer> res = indexReader.getReviewsWithToken(word, logMergeIndexWriter);
-            tlog.println(word + ":");
-            printEnumeration(res);
-        }
     }
 
 }

@@ -9,7 +9,7 @@ import static dynamic_index.global_tools.MiscTools.WHITE_SPACE_SEPARATOR;
 /**
  * Does String manipulations and parsings.
  */
-public final class ParsingTool {
+public class ParsingTool {
 
 
     /**

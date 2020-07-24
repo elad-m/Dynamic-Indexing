@@ -3,9 +3,9 @@ package dynamic_index;
 import dynamic_index.global_tools.IndexInvalidationTool;
 import dynamic_index.index_reading.IndexMergingModerator;
 import dynamic_index.index_structure.InvertedIndex;
-import dynamic_index.index_writing.IndexMergeWriter;
+import dynamic_index.index_writing.WordsIndexMergeWriter;
 import dynamic_index.index_writing.ReviewsMetaDataIndexWriter;
-import dynamic_index.index_writing.SimpleIndexWriter;
+import dynamic_index.index_writing.WordsSimpleIndexWriter;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,7 +20,12 @@ import static dynamic_index.global_tools.MiscTools.*;
 import static dynamic_index.global_tools.ParsingTool.extractHelpfulness;
 import static dynamic_index.global_tools.ParsingTool.textToNormalizedTokens;
 
-public class LogMergeIndexWriter {
+/**
+ * The method of building the index is by log-merging: every time the temporary (in-memory) reaches its
+ * maximum size it is written to the index directory as a sub index named 0. If there already is a directory with such
+ * name these two are being merged to "1". This continues recursively until an index with unique name is created.
+ */
+public class LogMergeIndexWriter implements IndexWriter{
 
     private final TemporaryIndex temporaryIndex;
     private final File allIndexesDirectory;
@@ -29,9 +34,15 @@ public class LogMergeIndexWriter {
     private ReviewsMetaDataIndexWriter reviewsMetaDataIndexWriter;
     private int reviewCounter = 1; // not necessarily the number of reviews in index in practice because deletion
 
+    /**
+     * Creates the log-merge writer of the index.
+     * @param allIndexesDirectory - where all index directories will be.
+     * @param tempIndexSize - size of temporary in-memory index.
+     */
     public LogMergeIndexWriter(String allIndexesDirectory, int tempIndexSize) {
         this.allIndexesDirectory = createDirectory(allIndexesDirectory);
         this.temporaryIndex = new TemporaryIndex(tempIndexSize);
+        IndexInvalidationTool.setInvalidationDirty(false);
     }
 
     private void reinitializeReviewMetaDataWriter(){
@@ -39,10 +50,11 @@ public class LogMergeIndexWriter {
         reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
     }
 
-    public void construct(String inputFile) {
+    @Override
+    public int construct(String inputFile) {
         try {
-            BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
             this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
+            BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
             StringBuilder reviewConcatFields = new StringBuilder();
 
             String line = bufferedReaderOfRawInput.readLine();
@@ -62,6 +74,13 @@ public class LogMergeIndexWriter {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return reviewCounter;
+    }
+
+    @Override
+    public int insert(String inputFile, String auxIndexDirectory) {
+        // indeed the second argument is ignored so we can have polymorphism here as well
+        return construct(inputFile);
     }
 
     private void handleLine(String field, String value, StringBuilder reviewConcatFields) {
@@ -121,13 +140,8 @@ public class LogMergeIndexWriter {
         }
     }
 
-    /**
-     * Looks for the corresponding BYTES in the invalidation vector file and "flips" them to 1
-     *
-     * @param indexDirectory - directory of the main index, aka "indexes"
-     * @param ridsToDelete   - review ids to delete. If not in range, will ignore.
-     */
-    public void removeReviews(String indexDirectory, int[] ridsToDelete) {
+    @Override
+    public void removeReviews(String indexDirectory, List<Integer> ridsToDelete) {
         IndexInvalidationTool.addToInvalidationFile(indexDirectory, ridsToDelete);
     }
 
@@ -235,14 +249,14 @@ public class LogMergeIndexWriter {
             IndexMergingModerator indexMergingModerator = indexReader.getIndexMergingModeratorLogMerge();
 
             // writing the index with the merger
-            IndexMergeWriter indexMergeWriter = new IndexMergeWriter(allIndexesDirectory.getAbsolutePath());
-            return indexMergeWriter.merge(indexMergingModerator);
+            WordsIndexMergeWriter wordsIndexMergeWriter = new WordsIndexMergeWriter(allIndexesDirectory.getAbsolutePath());
+            return wordsIndexMergeWriter.merge(indexMergingModerator);
         }
 
         private void putTempIndexInMap(TreeMap<Integer, File> sizeToFile) {
             File tempIndexDirectory = createDirectory(allIndexesDirectory + File.separator + "Z0");
-            SimpleIndexWriter simpleIndexWriter = new SimpleIndexWriter(tempIndexDirectory);
-            simpleIndexWriter.write(wordToInvertedIndexMap);
+            WordsSimpleIndexWriter wordsSimpleIndexWriter = new WordsSimpleIndexWriter(tempIndexDirectory);
+            wordsSimpleIndexWriter.write(wordToInvertedIndexMap);
             sizeToFile.put(0, tempIndexDirectory);
         }
 

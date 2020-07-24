@@ -8,7 +8,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("SpellCheckingInspection")
-public final class MiscTools {
+public class MiscTools {
 
     public static final int BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK = 8;
     public static final int WORDS_DEFAULT_MAX_TEMP_FILES = 1024;
@@ -35,25 +35,23 @@ public final class MiscTools {
     public static final String WORDS_SORTED_FILE_NAME = "WORDS_SORTED.bin";
     public static final String BINARY_FILE_SUFFIX = ".bin";
 
-    public static final String TERM_MAP_FILE_DEBUG = "TermToTermID.txt";
-    public static final String WORDS_MAPPING = "words";
+    public static final String TERM_MAP_FILE_DEBUG = "wordsTermToTermID.txt";
+    public static final String EXTERNAL_E4_MAP_OF_WORDS = "e4.txt";
+    public static final String EXTERNAL_E5_MAP_OF_WORDS = "e5.txt";
+    public static final String DIR_NAME_FOR_RANDOM_WORDS = "words";
 
     public static final String MERGED_INDEX_DIRECTORY = "mergedIndex";
     public static final String INDEXES_DIR_NAME = "indexes";
     public static final String LOG_MERGE_INDEXES_DIR_NAME = "logMergeIndexes";
 
+    public static final String LOG_FIRST_BUILD = "\nFirst index build: Log-Merged";
+    public static final String SIMPLE_FIRST_BUILD = "\nFirst index build: Simple-Merged";
+
+    public static final String ENTIRE_INSERTIONS_MESSAGE = "\nEntire index insertions ";
+    public static final String SINGLE_INSERTION_MESSAGE = "Index insertion number ";
+
 
     //====================================  Sizes  =====================================//
-
-    @SuppressWarnings("SameReturnValue")
-    public static int calculateNumOfTokensInFrontCodeBlock(int numOfTokens) {
-        //        if (numOfTokens > 10000 && numOfTokens <= 1000000) { // 10,000 to 1 million
-//            tokensPerBlock = (int) Math.pow(tokensPerBlock, 2);
-//        } else if (numOfTokens > 1000000) {
-//            tokensPerBlock = (int) Math.pow(tokensPerBlock, 3);
-//        }
-        return BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK;
-    }
 
     public static int roundDownToMultiplicationOf(int roundItDown, int multiplicationOf) {
         return (roundItDown / multiplicationOf) * multiplicationOf;
@@ -107,22 +105,27 @@ public final class MiscTools {
     //===============================  Misc  =====================================//
 
 
-    public static File createDirectory(String dir) {
-        File directory = new File(dir);
+    public static File createDirectory(String createDirectoryInThisPath) {
+        File directory = new File(createDirectoryInThisPath);
         if (!directory.mkdir()) {
-            System.out.format("Directory %s already exists." + System.lineSeparator(), dir);
+            System.out.format("Directory %s already exists." + System.lineSeparator(), createDirectoryInThisPath);
         }
         return directory;
+    }
+
+    public static int getRandomNumber(int lowerBound, int upperBound){
+        return ThreadLocalRandom.current().nextInt(lowerBound - 1, upperBound);
     }
 
     //=========================  Writing for Meta and Testing  =====================================//
 
     public static String[] getRandomWords(String indexDirectoryName, int numOfWords) {
         File indexDirectory = new File(indexDirectoryName);
-        Map<Integer, String> wordIdToString = MiscTools.loadMapFromFile(indexDirectory, MiscTools.WORDS_MAPPING);
+        Map<Integer, String> wordIdToString = MiscTools.loadWordsMapFromFileOutSideIndex(indexDirectory);
         String[] randomWords = new String[numOfWords];
         for (int i = 0; i < numOfWords; i++) {
-            int randomNum = ThreadLocalRandom.current().nextInt(0, wordIdToString.size());
+            int randomNum = getRandomNumber(1, wordIdToString.size());
+//            int randomNum = ThreadLocalRandom.current().nextInt(0, wordIdToString.size());
             randomWords[i] = (wordIdToString.get(randomNum));
         }
         return randomWords;
@@ -172,12 +175,16 @@ public final class MiscTools {
 
     }
 
-    private static Map<Integer, String> loadMapFromFile(File indexDirectory, String typeOfMapping) {
+    private static Map<Integer, String> loadMapFromIndexDirectoryFile(File indexDirectory) {
         File mapFile = new File(indexDirectory.getPath() + File.separator
-                + typeOfMapping + TERM_MAP_FILE_DEBUG);
-        Map<Integer, String> loadedMap = new HashMap<>(1000000);
+                + TERM_MAP_FILE_DEBUG);
+        return loadMapFromFile(mapFile);
+    }
+
+    private static Map<Integer, String> loadMapFromFile(File fileToLoad){
+        Map<Integer, String> loadedMap = new HashMap<>();
         try (BufferedReader mapBufferedReader =
-                     new BufferedReader(new FileReader(mapFile))) {
+                     new BufferedReader(new FileReader(fileToLoad))) {
             String line = mapBufferedReader.readLine();
             while (line != null) {
                 String[] wordAndId = line.split("[^a-zA-Z0-9]");
@@ -191,8 +198,14 @@ public final class MiscTools {
         return loadedMap;
     }
 
+    private static Map<Integer, String> loadWordsMapFromFileOutSideIndex(File indexDirectory) {
+        File externalMapFile = new File(indexDirectory.getParent() + File.separator
+                + DIR_NAME_FOR_RANDOM_WORDS + File.separator + EXTERNAL_E4_MAP_OF_WORDS);
+        return loadMapFromFile(externalMapFile);
+    }
 
-    public static <T> void printList(List<T> list, File indexPath, String name) {
+
+    public static <T> void writeListToFile(List<T> list, File indexPath, String name) {
         try {
             FileWriter fw = new FileWriter(indexPath.getPath() + File.separator + name);
             for (T t : list) {
