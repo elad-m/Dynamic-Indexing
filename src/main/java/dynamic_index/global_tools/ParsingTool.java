@@ -19,13 +19,32 @@ public class ParsingTool {
      */
     public static List<String> textToNormalizedTokens(String reviewTextLine) {
         List<String> filteredTokens = new ArrayList<>();
-        String[] tokens = reviewTextLine.split("[^a-zA-Z0-9]+"); // alphanumeric
+//        String[] tokens = reviewTextLine.split("[^a-zA-Z0-9]+"); // alphanumeric
+        List<String> tokens = splitByNonAlphaNumeric(reviewTextLine);
         for (String token : tokens) {
             if (!token.equals("")) // no empty
                 filteredTokens.add(token.toLowerCase());  // lower case but includes > 127
         }
         Collections.sort(filteredTokens);
         return filteredTokens;
+    }
+
+    public static List<String> splitByNonAlphaNumeric(String text){
+        List<String> tokens = new ArrayList<>();
+        StringBuilder currentToken = new StringBuilder();
+        for(char c: text.toCharArray()){
+            if(Character.isLetterOrDigit(c)){
+                currentToken.append(c);
+            } else {
+                if(currentToken.length() > 0){
+                    tokens.add(currentToken.toString());
+                    currentToken.replace(0, currentToken.length(), "");
+                }
+            }
+        }
+        if(currentToken.length() > 0)
+            tokens.add(currentToken.toString());
+        return tokens;
     }
 
     /**

@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Writes an index from an in-memory map into som directory.
- * No bulk reading from sorted file, no merging. Should be used for small index size (below 1000?)
+ * Writes an index from an in-memory map into some directory.
+ * No bulk reading from sorted file, no merging. Should be used for small index size.
  */
 public class WordsSimpleIndexWriter {
 
@@ -53,7 +53,7 @@ public class WordsSimpleIndexWriter {
         }
     }
 
-    void writeMapToFiles(TreeMap<String, InvertedIndex> wordToInvertedIndex) {
+    private void writeMapToFiles(TreeMap<String, InvertedIndex> wordToInvertedIndex) {
         try {
             writeBlockOfInvertedIndexToFile(wordToInvertedIndex); // first because byte calculation
             writeFrontCodeFile(wordToInvertedIndex);
@@ -71,7 +71,7 @@ public class WordsSimpleIndexWriter {
     }
 
 
-    void writeFrontCodeFile(TreeMap<String, InvertedIndex> wordToInvertedIndex) throws IOException {
+    private void writeFrontCodeFile(TreeMap<String, InvertedIndex> wordToInvertedIndex) throws IOException {
         TreeMap<String, InvertedIndex> blockOfWordsToInvertedIndex = new TreeMap<>();
 
         for (Map.Entry<String, InvertedIndex> wordAndInvertedIndex : wordToInvertedIndex.entrySet()) {
@@ -107,7 +107,7 @@ public class WordsSimpleIndexWriter {
         bufferedStringConcatWriter.write(allWordsSuffixConcatInBlock.toString());
     }
 
-    void closeStreams() {
+    private void closeStreams() {
         try {
             frontCodeOutputStream.close();
             invertedOutputStream.close();

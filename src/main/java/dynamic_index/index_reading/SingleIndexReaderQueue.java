@@ -8,6 +8,9 @@ import java.io.*;
 import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * Reads an index as a queue: from lexicographically lowest word to the highest.
+ */
 class SingleIndexReaderQueue{
 
     private final File mainIndexDirectory;
@@ -20,6 +23,7 @@ class SingleIndexReaderQueue{
     private int rowsPointer = 0;
     private boolean isQueueDone; // finished reading from file AND queue has been emptied
     private final BufferedInputStream invertedIndexBIS;
+    private int totalInvertedIndexBytesReadAssertion = 0;
 
     public SingleIndexReaderQueue(SingleIndexReader singleIndexReader) throws FileNotFoundException {
         this.singleIndexReader = singleIndexReader;
@@ -28,8 +32,8 @@ class SingleIndexReaderQueue{
         load();
     }
 
-    public String peek(){
-        return wordToInvertedIndexQueue.firstKey();
+    public Map.Entry<String,InvertedIndex> peek(){
+        return wordToInvertedIndexQueue.firstEntry();
     }
 
     public Map.Entry<String, InvertedIndex> poll(){
@@ -72,10 +76,13 @@ class SingleIndexReaderQueue{
         byte[] rowToReadInto = new byte[pointerLength];
         int numOfReadBytes = invertedIndexBIS.read(rowToReadInto);
 
+        // asserting that we didn't skip a postings list and that the number of bytes read is correct.
+        totalInvertedIndexBytesReadAssertion += numOfReadBytes;
+        assert totalInvertedIndexBytesReadAssertion == wordToTokenMetaData.getValue().getFreqPointer();
         assert numOfReadBytes == pointerLength;
 
         TreeMap<Integer, Integer> ridToFrequencyMap = singleIndexReader.getRidToFreqMapFromRawInvertedIndex(rowToReadInto);
-        if(ridToFrequencyMap.isEmpty()){ // could be empty, because of deletion. The method above filter deleted rids.
+        if(ridToFrequencyMap.isEmpty()){ // could be empty, because of deletion. The method above filters deleted rids.
             return null;
         } else {
             return new InvertedIndex(wordToTokenMetaData.getKey(), ridToFrequencyMap, mainIndexDirectory, singleIndexReader.getCurrentIndexDirectory());
@@ -95,4 +102,8 @@ class SingleIndexReaderQueue{
         return !isQueueDone;
     }
 
+    @Override
+    public String toString() {
+        return singleIndexReader.toString();
+    }
 }

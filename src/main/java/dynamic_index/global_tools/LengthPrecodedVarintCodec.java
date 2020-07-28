@@ -105,10 +105,14 @@ public class LengthPrecodedVarintCodec {
                     i++;
                     break;
                 case 2:
-                    short rid2 = byteBufferOfRow.getShort(i);
-                    int debug1 = getDecodedInteger(rid2);
-                    integersInBytesRow.add(debug1);
-                    i += 2;
+                    try{
+                        short rid2 = byteBufferOfRow.getShort(i);
+                        int debug1 = getDecodedInteger(rid2);
+                        integersInBytesRow.add(debug1);
+                        i += 2;
+                    } catch (IndexOutOfBoundsException indexOutOfBoundsException){
+                        indexOutOfBoundsException.getCause();
+                    }
                     break;
                 case 3:
                     byte[] threeArray = new byte[4];

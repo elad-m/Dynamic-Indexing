@@ -85,20 +85,12 @@ public class SimpleMergeIndexWriter implements IndexWriter{
     private void sortAndConstructIndex(String inputFile, final int initialReviewCounter) {
         try {
             Map<Integer, String> wordTermIdToTerm;
-//            if (!SKIP_SORTING) {
-                constructTermToTermIDMapping(inputFile); // token and review counter complete
-//                writeHashmapFor100Random();
-                firstSortIteration(inputFile, initialReviewCounter); // review counter resets, second input reading
-                externalSort();
-                wordTermIdToTerm = swapHashMapDirections(wordTermToTermID);
-//            }
-//            else { // when skipping sorting
-//                tokenCounter = getTokenCounter(currentIndexDirectory, false);  // also token counter
-//                reviewCounter = 1 + getReviewCounter(currentIndexDirectory, false);
-//                wordTermIdToTerm = loadMapFromFile(currentIndexDirectory, WORDS_MAPPING);
-//            }
-            System.gc();
-            constructIndexFromSorted(wordTermIdToTerm);
+            constructTermToTermIDMapping(inputFile); // token and review counter complete
+            firstSortIteration(inputFile, initialReviewCounter); // review counter resets, second input reading
+            externalSort();
+            wordTermIdToTerm = swapHashMapDirections(wordTermToTermID);
+
+            constructIndexFromSorted(wordTermIdToTerm, initialReviewCounter);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -111,14 +103,14 @@ public class SimpleMergeIndexWriter implements IndexWriter{
     }
 
     private void constructTermToTermIDMapping(String inputFile) throws IOException {
-        System.out.println("Starting term mapping:");
+//        System.out.println("Starting term mapping:");
         Set<String> wordTerms = getTermsSorted(inputFile); // first reading of whole input file
         createMappingForSet(wordTerms, wordTermToTermID);
         wordTerms.clear();
     }
 
     private Set<String> getTermsSorted(String inputFile) throws IOException {
-        long startTime = System.currentTimeMillis();
+//        long startTime = System.currentTimeMillis();
 
         BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
         Set<String> wordTerms = new TreeSet<>();
@@ -139,9 +131,9 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         }
 
         bufferedReaderOfRawInput.close();
-        System.out.print("token counter: " + tokenCounter);
-        System.out.format("\twordTerms.size(): %d\n", wordTerms.size());
-        PrintingTool.printElapsedTime(startTime, "Building set of words");
+//        System.out.print("token counter: " + tokenCounter);
+//        System.out.format("\twordTerms.size(): %d\n", wordTerms.size());
+//        PrintingTool.printElapsedTime(startTime, "Building set of words");
         return wordTerms;
     }
 
@@ -161,11 +153,11 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         File mergeFilesDirectory = wordsTermToReviewBlockWriter.getMergeFilesDirectory();
         int blockSizeInPairs = wordsTermToReviewBlockWriter.getBLOCK_SIZE_IN_INT_PAIRS();
         new ExternalMergeSort(currentIndexDirectory, mergeFilesDirectory, blockSizeInPairs);
-        PrintingTool.printElapsedTime(startTime, "Words Sort Merging");
+        PrintingTool.printElapsedTime(startTime, "Words Sort-Merging");
     }
 
     private void firstSortIteration(String inputFile, int initialReviewCounter) throws IOException {
-        System.out.println("First sort iteration...");
+//        System.out.println("First sort iteration...");
         long blockWriterStartTime = System.currentTimeMillis();
 
         BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
@@ -238,13 +230,17 @@ public class SimpleMergeIndexWriter implements IndexWriter{
 
 
 
-    private void constructIndexFromSorted(Map<Integer, String> wordsTermIdToTerm) throws IOException {
+    private void constructIndexFromSorted(Map<Integer, String> wordsTermIdToTerm, int initialReviewCounter) throws IOException {
+        /* taking into account the number of reviews written in a write (build from scratch/insert), as the review counter
+        goes always up between building and insertions */
+        int numberOfReviewsToCurrentlyWrite = reviewCounter - initialReviewCounter;
+
         // rids
         reviewsMetaDataIndexWriter.closeWriter(); // was written during first sort iteration
 
         // words
         int readBlockSize = estimateBestSizeOfWordsBlocks(tokenCounter, false);
-        wordsDataIndexWriter.writeFromSortedFileByBlocks(BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK, readBlockSize, wordsTermIdToTerm, reviewCounter);
+        wordsDataIndexWriter.writeFromSortedFileByBlocks(BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK, readBlockSize, wordsTermIdToTerm, numberOfReviewsToCurrentlyWrite);
 
         deleteSortedFile(currentIndexDirectory);
     }
@@ -269,6 +265,7 @@ public class SimpleMergeIndexWriter implements IndexWriter{
 
     /**
      * Merges all indexes into one index.
+     * NOTE: Should not touch the review meta data writer at all, or at least close it.
      * @param indexReader - Uses IndexReader to read from all indexes
      */
     public void merge(IndexReader indexReader) {
@@ -281,7 +278,7 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         IndexRemover indexRemover = new IndexRemover();
         indexRemover.removeFilesAfterMerge(allIndexesDirectory.getAbsolutePath());
         moveMergedFilesToMainIndex(mergedDirectory);
-        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
+//        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
     }
 
     private void emptyInvalidationFile() {

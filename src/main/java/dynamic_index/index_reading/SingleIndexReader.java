@@ -53,6 +53,7 @@ public class SingleIndexReader {
 
     public TreeMap<Integer, Integer> getReviewsWithWord(String word) {
         try {
+            assert word != null;
             tokenToFind = word;
             return findInvertedIndexLine(word);
         } catch (IOException e) {
@@ -137,6 +138,7 @@ public class SingleIndexReader {
                 totalCharReadInString += length;
             } else {
                 StringBuilder currentWord = new StringBuilder(firstWord.substring(0, prefixLength));
+                assert suffixLength != 0;
                 readWordToStringBuilder(totalCharReadInString, suffixLength, currentWord);
                 wordToPointerAndLength.put(currentWord.toString(),
                         new TokenMetaData(freqPointer, freqLength));
@@ -160,16 +162,22 @@ public class SingleIndexReader {
                                  int rowsLowerBound, int rowsUpperBound,
                                  int middleInRows)
             throws IOException {
-        if (wordToPointerAndLengths.containsKey(word)) {
-            return wordToPointerAndLengths.get(word);
-        } else if (word.compareTo(wordToPointerAndLengths.lastKey()) > 0) { // jump forward
-            return binarySearch(word,
-                    middleInRows + 1, rowsUpperBound);
-        } else if (word.compareTo(wordToPointerAndLengths.firstKey()) < 0) { // jump backwards
-            return binarySearch(word,
-                    rowsLowerBound, middleInRows - 1);
-        } else { // word does not exist in the review data!
-            return null;  // empty enumeration?
+        try{
+            if (wordToPointerAndLengths.containsKey(word)) {
+                return wordToPointerAndLengths.get(word);
+            } else if (word.compareTo(wordToPointerAndLengths.lastKey()) > 0) { // jump forward
+                return binarySearch(word,
+                        middleInRows + 1, rowsUpperBound);
+            } else if (word.compareTo(wordToPointerAndLengths.firstKey()) < 0) { // jump backwards
+                return binarySearch(word,
+                        rowsLowerBound, middleInRows - 1);
+            } else { // word does not exist in the review data!
+                return null;  // empty enumeration?
+            }
+        } catch (NoSuchElementException e) {
+            System.err.println("The word was: " + word + " Map size was: " + wordToPointerAndLengths.size());
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -239,4 +247,8 @@ public class SingleIndexReader {
         return currentIndexDirectory;
     }
 
+    @Override
+    public String toString() {
+        return  "of Dir = " + currentIndexDirectory.getName() ;
+    }
 }

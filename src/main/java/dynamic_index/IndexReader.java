@@ -387,11 +387,4 @@ public class IndexReader {
         return indexMergingModerator;
     }
 
-    public void rewriteReviewMetaDataMerge(){
-        reviewMetaDataIndexReader.rewriteReviewMetaData();
-    }
-
-
-
-
 }

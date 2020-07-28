@@ -1,7 +1,6 @@
 package dynamic_index.index_experiments;
 
 import dynamic_index.*;
-import dynamic_index.global_tools.MiscTools;
 import dynamic_index.global_tools.PrintingTool;
 
 import java.io.*;
@@ -20,25 +19,28 @@ abstract public class Experiment {
     protected final int NUMBER_OF_REVIEWS_TO_QUERY_DELETE = 10;
 
     protected final int NUMBER_OF_WORDS_TO_QUERY = 50;
-    protected final int NO_AVERAGE_ARGUMENT = 1;
 
-    private final String AUXILIARY_INDEX_DIR_PATTERN = "aux";
-
-    public PrintWriter tlog = null;
-    public final int inputScale;
-    final String allIndexesDirectory;
+    protected PrintWriter tlog = null;
+    protected final int inputScale;
+    protected final String allIndexesDirectory;
+    protected final ScalingCases scalingCases;
+    protected final ResultsWriter resultsWriter;
+    protected final WordsRandomizer wordsRandomizer;
     @SuppressWarnings("unused")
     final String indexParentDirectory;
-    final ScalingCases scalingCases;
 
     public Experiment(String localDir, String indexDirectoryName, int inputScale, boolean logMergeType){
         this.indexParentDirectory = localDir;
         this.allIndexesDirectory = indexDirectoryName;
         this.inputScale = inputScale;
         this.scalingCases = new ScalingCases(this.inputScale, logMergeType);
+        this.resultsWriter = new ResultsWriter();
+        this.wordsRandomizer = new WordsRandomizer(allIndexesDirectory, inputScale);
     }
 
     public abstract void runExperiment();
+
+    public abstract void initiateExperiment();
 
     protected void queryAfterBuildIndex(IndexReader indexReader, IndexWriter indexWriter) {
         tlog.println("===== After Build/Merge... =====");
@@ -50,26 +52,28 @@ abstract public class Experiment {
     protected IndexReader doInsertions(IndexWriter indexWriter) {
         IndexReader indexReader;
         int currentNumberOfReviews;
-
+//        List<String> words = Arrays.asList("playful", "aluminum", "airing", "enthusiastic", "sagal", "fakey", "flipping", "lousy", "rigorous", "pedro", "confidence", "inferior", "fortyish", "peopled", "unsold", "per", "disagreeable", "21", "vibrato", "campbells", "hiccups", "symphony", "hermit", "oranges", "w", "balchin", "sidestep", "forgot", "scarest", "europa", "education", "audiencei", "danielle", "km", "nationalism", "stories", "fool", "waifish", "wheelers", "whife", "jacket", "rasps", "disinterestedness", "keeps", "06", "ushers", "cooks", "merda", "establishment", "veneza");
         int numberOfInsertions = scalingCases.getNumberOfInsertionFiles();
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < numberOfInsertions; i++) {
             tlog.println("=====  Index insertion number " + i + "=====");
             currentNumberOfReviews = insertToIndex(indexWriter, i);
             indexReader = deleteReviews(indexWriter, currentNumberOfReviews);
-            testWordQueriesOnAverage(indexReader, indexWriter, MiscTools.getRandomWords(allIndexesDirectory, NUMBER_OF_WORDS_TO_QUERY));
+            testWordQueriesOnAverage(indexReader,
+                    indexWriter,
+                    wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
+//            words);
 
         }
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, ENTIRE_INSERTIONS_MESSAGE, NO_AVERAGE_ARGUMENT);
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, ENTIRE_INSERTIONS_MESSAGE);
         return recreateIndexReader(indexWriter);
     }
 
     protected int insertToIndex(IndexWriter indexWriter, int insertionNumber) {
-//        tlog.println("=====  Index insertion number " + insertionNumber + "=====");
         long startTime = System.currentTimeMillis();
         int currentNumberOfReviews = indexWriter.insert(scalingCases.getInsertFileName(insertionNumber),
                 getAuxiliaryIndexDirPattern(insertionNumber));
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, SINGLE_INSERTION_MESSAGE + insertionNumber, NO_AVERAGE_ARGUMENT);
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, SINGLE_INSERTION_MESSAGE + insertionNumber);
         return currentNumberOfReviews;
     }
 
@@ -101,7 +105,7 @@ abstract public class Experiment {
     private void testReviewMetaData(IndexReader indexReader, int currentNumberOfReviews) {
         List<Integer> rids = scalingCases.getRandomRids(NUMBER_OF_REVIEWS_TO_QUERY_META, 1, currentNumberOfReviews);
         tlog.print("querying rids: ");
-        PrintingTool.printCollection(tlog, rids);
+        PrintingTool.printList(tlog, rids);
         for (int rid : rids) {
             tlog.println("rid: " + rid + " " +
                     indexReader.getProductId(rid) + " " +
@@ -114,27 +118,45 @@ abstract public class Experiment {
 
     protected void testWordQueriesOnAverage(IndexReader indexReader,
                                             IndexWriter indexWriter,
-                                            String[] wordTestCases) {
+                                            List<String> wordTestCases) {
         long startTime = System.currentTimeMillis();
+        System.out.print("words queried: ");
+        PrintingTool.printList(wordTestCases);
+        boolean print = true;
         for (String word : wordTestCases) {
             Enumeration<Integer> res = indexReader.getReviewsWithToken(word, indexWriter);
-//            tlog.println(word + ":");
-//            printEnumeration(res);
-//             todo: delete the following for time measuring
+            if(print){
+                printResultsOfQuery(word, res, indexReader, indexWriter);
+                print = false;
+            }
+        }
+        resultsWriter.addToElapsedList(startTime, wordTestCases.size());
+        String message = "querying " + wordTestCases.size() + " random words";
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, message);
+        tlog.println();
+    }
+
+    protected void printResultsOfQuery(String word, Enumeration<Integer> res, IndexReader indexReader, IndexWriter indexWriter) {
+        tlog.println(word + ":");
+        printEnumeration(res);
+//        if(indexWriter instanceof LogMergeIndexWriter){
+//            LogMergeIndexWriter logMergeIndexWriter = (LogMergeIndexWriter)indexWriter;
+//            tlog.println("#mentions: " + indexReader.getNumberOfMentions(word, logMergeIndexWriter));
+//            tlog.println("#reviews: " + indexReader.getNumberOfReviews(word, logMergeIndexWriter));
+//        } else {
 //            tlog.println("#mentions: " + indexReader.getNumberOfMentions(word));
 //            tlog.println("#reviews: " + indexReader.getNumberOfReviews(word));
-        }
-        String message = "querying " + wordTestCases.length + " random words on average";
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, message, wordTestCases.length);
+//        }
     }
 
     protected String getAuxiliaryIndexDirPattern(int num) {
+        String AUXILIARY_INDEX_DIR_PATTERN = "aux";
         return allIndexesDirectory + File.separator + AUXILIARY_INDEX_DIR_PATTERN + num;
     }
 
-    private void removeIndex(String indexDirectoryName) {
+    protected void removeIndex() {
         IndexRemover indexRemover = new IndexRemover();
-        indexRemover.removeAllIndexFiles(indexDirectoryName);
+        indexRemover.removeAllIndexFiles(allIndexesDirectory);
     }
 
     protected void printEnumeration(Enumeration<?> enumToPrint) {
@@ -162,7 +184,7 @@ abstract public class Experiment {
         }
         tlog.println("=======================================");
         tlog.println(experimentType);
-        tlog.println("Log E" + scalingCases.getTestType());
+        tlog.println("Scale E" + scalingCases.getTestType());
         tlog.println("=======================================");
         logDateAndTime();
     }

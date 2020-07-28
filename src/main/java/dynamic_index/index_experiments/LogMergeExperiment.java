@@ -14,6 +14,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static dynamic_index.global_tools.MiscTools.*;
@@ -33,22 +35,44 @@ public class LogMergeExperiment extends Experiment{
 
     @Override
     public void runExperiment() {
-        printDateAndTime();
-        createTestLog("Log Merge ");
+        initiateExperiment();
 
         IndexWriter logMergeIndexWriter = buildIndex();
         IndexReader indexReader = new IndexReader(allIndexesDirectory, true);
         queryAfterBuildIndex(indexReader, logMergeIndexWriter);
 
+//        System.out.print("words queried: ");
+//        List<String> wordTestCases = scalingCases.getWordQueries();
+//        PrintingTool.printCollection(wordTestCases);
+//
+//        for (String word : wordTestCases) {
+//            Enumeration<Integer> res = indexReader.getReviewsWithToken(word, logMergeIndexWriter);
+//            printResultsOfQuery(word, res, indexReader, logMergeIndexWriter);
+//        }
+
+//        int currentNumberOfReviews;
+//        int numberOfInsertions = scalingCases.getNumberOfInsertionFiles();
+//        for (int i = 0; i < numberOfInsertions; i++) {
+//            tlog.println("=====  Index insertion number " + i + "=====");
+//            currentNumberOfReviews = insertToIndex(logMergeIndexWriter, i);
+//            indexReader = deleteReviews(logMergeIndexWriter, currentNumberOfReviews);
+//
+//            for (String word : wordTestCases) {
+//                Enumeration<Integer> res = indexReader.getReviewsWithToken(word, logMergeIndexWriter);
+//                printResultsOfQuery(word, res, indexReader, logMergeIndexWriter);
+//            }
+//        }
+
         indexReader = doInsertions(logMergeIndexWriter);
 
-//        long indexSize = getAllIndexSize((new File (allIndexesDirectory)).toPath());
-//        tlog.println("total index size: " + indexSize);
-
-        IndexRemover indexRemover = new IndexRemover();
-        indexRemover.removeAllIndexFiles(allIndexesDirectory);
-
+        removeIndex();
+        resultsWriter.writeResults("Log merge results", tlog);
         tlog.close();
+    }
+
+    public void initiateExperiment(){
+        printDateAndTime();
+        createTestLog("Log Merge ");
     }
 
     private IndexWriter buildIndex(){
@@ -56,9 +80,9 @@ public class LogMergeExperiment extends Experiment{
 
         long startTime = System.currentTimeMillis();
         LogMergeIndexWriter logMergeIndexWriter = new LogMergeIndexWriter(allIndexesDirectory,
-                TEMP_INDEX_SIZE);
+                TEMP_INDEX_SIZE, inputScale);
         logMergeIndexWriter.construct(scalingCases.getInputFilename());
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, LOG_FIRST_BUILD, NO_AVERAGE_ARGUMENT);
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, LOG_FIRST_BUILD);
         return logMergeIndexWriter;
     }
 

@@ -70,7 +70,7 @@ public class WordsIndexMergeWriter {
         }
     }
 
-    void writeMapToFiles() {
+    private void writeMapToFiles() {
         try {
             writeBlockOfInvertedIndexToFile(); // first because byte calculation
             writeFrontCodeFile();
@@ -139,7 +139,7 @@ public class WordsIndexMergeWriter {
         closeStreams();
     }
 
-    void closeStreams() {
+    private void closeStreams() {
         try {
             frontCodeOutputStream.close();
             invertedOutputStream.close();

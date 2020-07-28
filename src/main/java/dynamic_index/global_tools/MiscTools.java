@@ -61,8 +61,8 @@ public class MiscTools {
         long estimatedSizeOfFile = numOfTokens * MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
         long blockSize = calculateSizeOfBlock(estimatedSizeOfFile); // IN BYTES
         long blockSizeInPairs = blockSize / 8;
-        System.out.println("blockSize in BYTES:" + blockSize);
-        System.out.println("blockSize in PAIRS:" + blockSizeInPairs);
+//        System.out.println("blockSize in BYTES:" + blockSize);
+//        System.out.println("blockSize in PAIRS:" + blockSizeInPairs);
         assert blockSizeInPairs <= Integer.MAX_VALUE;
         return (int) blockSizeInPairs;
     }
@@ -119,18 +119,6 @@ public class MiscTools {
 
     //=========================  Writing for Meta and Testing  =====================================//
 
-    public static String[] getRandomWords(String indexDirectoryName, int numOfWords) {
-        File indexDirectory = new File(indexDirectoryName);
-        Map<Integer, String> wordIdToString = MiscTools.loadWordsMapFromFileOutSideIndex(indexDirectory);
-        String[] randomWords = new String[numOfWords];
-        for (int i = 0; i < numOfWords; i++) {
-            int randomNum = getRandomNumber(1, wordIdToString.size());
-//            int randomNum = ThreadLocalRandom.current().nextInt(0, wordIdToString.size());
-            randomWords[i] = (wordIdToString.get(randomNum));
-        }
-        return randomWords;
-    }
-
     public static void writeMapToFile(Map<String, Integer> wordTermToTermID,
                                       File indexDirectory) {
         System.out.println("writing hashmap...");
@@ -174,36 +162,6 @@ public class MiscTools {
         fw.write('\n');
 
     }
-
-    private static Map<Integer, String> loadMapFromIndexDirectoryFile(File indexDirectory) {
-        File mapFile = new File(indexDirectory.getPath() + File.separator
-                + TERM_MAP_FILE_DEBUG);
-        return loadMapFromFile(mapFile);
-    }
-
-    private static Map<Integer, String> loadMapFromFile(File fileToLoad){
-        Map<Integer, String> loadedMap = new HashMap<>();
-        try (BufferedReader mapBufferedReader =
-                     new BufferedReader(new FileReader(fileToLoad))) {
-            String line = mapBufferedReader.readLine();
-            while (line != null) {
-                String[] wordAndId = line.split("[^a-zA-Z0-9]");
-                assert wordAndId.length == 2;
-                loadedMap.put(Integer.parseInt(wordAndId[1]), wordAndId[0]);
-                line = mapBufferedReader.readLine();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return loadedMap;
-    }
-
-    private static Map<Integer, String> loadWordsMapFromFileOutSideIndex(File indexDirectory) {
-        File externalMapFile = new File(indexDirectory.getParent() + File.separator
-                + DIR_NAME_FOR_RANDOM_WORDS + File.separator + EXTERNAL_E4_MAP_OF_WORDS);
-        return loadMapFromFile(externalMapFile);
-    }
-
 
     public static <T> void writeListToFile(List<T> list, File indexPath, String name) {
         try {

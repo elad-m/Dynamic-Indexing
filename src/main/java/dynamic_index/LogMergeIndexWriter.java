@@ -27,8 +27,9 @@ import static dynamic_index.global_tools.ParsingTool.textToNormalizedTokens;
  */
 public class LogMergeIndexWriter implements IndexWriter{
 
-    private final TemporaryIndex temporaryIndex;
     private final File allIndexesDirectory;
+    private final TemporaryIndex temporaryIndex;
+    private final int inputScale;
     private final HashSet<String> terms = new HashSet<>();
 
     private ReviewsMetaDataIndexWriter reviewsMetaDataIndexWriter;
@@ -39,15 +40,11 @@ public class LogMergeIndexWriter implements IndexWriter{
      * @param allIndexesDirectory - where all index directories will be.
      * @param tempIndexSize - size of temporary in-memory index.
      */
-    public LogMergeIndexWriter(String allIndexesDirectory, int tempIndexSize) {
+    public LogMergeIndexWriter(String allIndexesDirectory, int tempIndexSize, int inputScale) {
         this.allIndexesDirectory = createDirectory(allIndexesDirectory);
         this.temporaryIndex = new TemporaryIndex(tempIndexSize);
+        this.inputScale = inputScale;
         IndexInvalidationTool.setInvalidationDirty(false);
-    }
-
-    private void reinitializeReviewMetaDataWriter(){
-        reviewsMetaDataIndexWriter.closeWriter();
-        reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
     }
 
     @Override
@@ -69,8 +66,6 @@ public class LogMergeIndexWriter implements IndexWriter{
             }
             bufferedReaderOfRawInput.close();
             reviewsMetaDataIndexWriter.closeWriter();
-//            reinitializeReviewMetaDataWriter();
-//            writeSetToFile(terms, allIndexesDirectory);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -193,16 +188,6 @@ public class LogMergeIndexWriter implements IndexWriter{
             }
         }
 
-        private int getQueueSize() {
-            int size = 0; // would be the sum of all posting lists lengths, i.e. number of reviews
-            // - disregarding frequency - a word is in
-            for (InvertedIndex invertedIndex : wordToInvertedIndexMap.values()) {
-                size += invertedIndex.getSizeByReviews();
-            }
-            assert size <= TEMPORARY_INDEX_SIZE;
-            return size;
-        }
-
         private void writeTemporaryIndex() throws IOException {
             TreeMap<Integer, File> indexSizeToIndexDirectory = getSizeToIndexDirectoryMap();
             putTempIndexInMap(indexSizeToIndexDirectory);
@@ -215,7 +200,7 @@ public class LogMergeIndexWriter implements IndexWriter{
                 SortedMap<Integer, File> onlyFilesToMerge = indexSizeToIndexDirectory.headMap(numberOfFirstIndexDirectoriesToMerge);
 
                 boolean isMergingAllIndexes = numberOfFirstIndexDirectoriesToMerge == indexSizeToIndexDirectory.size();
-                File mergedDirectory = mergeIndexDirectories(onlyFilesToMerge, isMergingAllIndexes);
+                File mergedDirectory = mergeIndexDirectories(onlyFilesToMerge);
                 emptyInvalidationFileIfNeeded(isMergingAllIndexes);
 
                 renameMergedDirectory(mergedDirectory, numberOfFirstIndexDirectoriesToMerge);
@@ -242,7 +227,7 @@ public class LogMergeIndexWriter implements IndexWriter{
                     mergedPath.resolveSibling(newDirName));
         }
 
-        private File mergeIndexDirectories(SortedMap<Integer, File> sizeToFilesToMerge, boolean mergingAllIndexes) {
+        private File mergeIndexDirectories(SortedMap<Integer, File> sizeToFilesToMerge) {
             // building the merger
             IndexReader indexReader = new IndexReader(allIndexesDirectory.getAbsolutePath(),
                     sizeToFilesToMerge.values());

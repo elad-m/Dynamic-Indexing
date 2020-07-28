@@ -24,13 +24,13 @@ public class ExternalMergeIteration {
         this.filesToMergeDirectory = mergeFiles[0].getParentFile();
         this.iterationNumber = iterationNumber;
         this.numOfMergeFiles = mergeFiles.length;
-        System.out.println("numOfMergeFiles: " + numOfMergeFiles + " " + iterationNumber);
+//        System.out.println("numOfMergeFiles: " + numOfMergeFiles + " " + iterationNumber);
         this.numOfFilesToMergeToOneFile = Math.max(2, (int)Math.ceil(Math.sqrt(numOfMergeFiles)));
         this.mergeFilesToRead =  mergeFiles;
         this.mergeFilesQueues = new ArrayList<>();
         this.BLOCK_SIZE_IN_INT_PAIRS = MiscTools.roundUpToProductOfPairSize(blockSizeInPairs / numOfMergeFiles);
-        System.out.println("BLOCK SIZE IN PAIRS:" + BLOCK_SIZE_IN_INT_PAIRS +
-                " IN ITERATION: " + iterationNumber);
+//        System.out.println("BLOCK SIZE IN PAIRS:" + BLOCK_SIZE_IN_INT_PAIRS +
+//                " IN ITERATION: " + iterationNumber);
         this.outputBlockWriter =
                 new OutputBlockWriter(indexDirectory.getPath(),
                         BLOCK_SIZE_IN_INT_PAIRS, this.iterationNumber);

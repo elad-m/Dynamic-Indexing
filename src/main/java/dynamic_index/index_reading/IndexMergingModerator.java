@@ -14,6 +14,10 @@ public class IndexMergingModerator {
 
     private final List<SingleIndexReaderQueue> singleIndexReaderQueues = new ArrayList<>();
 
+    /**
+     * Adds a singleIndexReaderQueue to the list of queues.
+     * @param singleIndexReader - needed to create the single index reader queue.
+     */
     public void add(SingleIndexReader singleIndexReader) {
         try {
             singleIndexReaderQueues.add(new SingleIndexReaderQueue(singleIndexReader));
@@ -22,12 +26,20 @@ public class IndexMergingModerator {
         }
     }
 
+    /**
+     * Creating the index queues in a bulk
+     * @param singleIndexReaderList - list of single index readers.
+     */
     public void addAll(List<SingleIndexReader> singleIndexReaderList) {
         for (SingleIndexReader singleIndexReader : singleIndexReaderList) {
             add(singleIndexReader);
         }
     }
 
+    /**
+     * @return - returns the minimal word from all indexes for merging.
+     * Comparison is done by word, and then by the first inverted index value.
+     */
     public Map.Entry<String, InvertedIndex> getNextMergingWordAndIndex() {
         Map.Entry<String, InvertedIndex> currMinPair;
         SingleIndexReaderQueue minimumQueue = getMinimumQueue();
@@ -47,15 +59,26 @@ public class IndexMergingModerator {
         } else {
             for (SingleIndexReaderQueue currentQueue : singleIndexReaderQueues) {
                 if (currentQueue.isQueueNotDone()) {
-                    String minPairForCurrentQueue = currentQueue.peek();
+                    Map.Entry<String, InvertedIndex> minPairForCurrentQueue = currentQueue.peek();
                     assert minPairForCurrentQueue != null;
-                    String prevMinPair = minQueue.peek();
-                    if (minPairForCurrentQueue.compareTo(prevMinPair) < 0) {
+                    Map.Entry<String, InvertedIndex> prevMinPair = minQueue.peek();
+                    if(compareWordAndInvertedIndexEntries(minPairForCurrentQueue, prevMinPair) < 0){
                         minQueue = currentQueue;
                     }
                 }
             }
             return minQueue;
+        }
+    }
+
+    private int compareWordAndInvertedIndexEntries(Map.Entry<String, InvertedIndex> entry1,
+                                                   Map.Entry<String, InvertedIndex> entry2){
+        if(entry1.getKey().compareTo(entry2.getKey()) < 0){
+            return -1;
+        } else if (entry1.getKey().compareTo(entry2.getKey()) > 0){
+            return 1;
+        } else { // the same words, compare by inverted index
+            return entry1.getValue().compareTo(entry2.getValue());
         }
     }
 

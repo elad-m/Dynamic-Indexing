@@ -4,6 +4,7 @@ import dynamic_index.global_tools.MiscTools;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @SuppressWarnings("SpellCheckingInspection")
@@ -21,8 +22,8 @@ public class ScalingCases {
     final int[] delReviews1 = new int[]{1, 5, 10, 11, 13};
     final int[] metaReview1 = new int[]{-1, 20, 0, 1, 16, 13};
 
-    final String[] we4 = {"zzzzzzzzzzzzzzzzz", "koreaa", "0", "zzzzzzzzzzzzzz", "a"};
-    //,
+    final String[] we4 = {"zzzzzzzzzzzzzzzzz", "0", "zzzzzzzzzzzzzz", "a", "to", "in"};
+//    ,
 //            "africanism", "grotta", "acheerleader",
 //            "slinkyness", "amazoni", "epesode", "zaius"};
     final String[] inse4 = {"africanism", "grotta", "acheerleader", "slinkyness", "amazoni", "epesode", "zaius"};
@@ -158,8 +159,8 @@ public class ScalingCases {
         return insertDirectory.getAbsoluteFile().listFiles(File::isFile);
     }
 
-    public String[] getWordQueries() {
-        return wordQueries;
+    public List<String> getWordQueries() {
+        return Arrays.asList(wordQueries);
     }
 
     public int getTestType() {
