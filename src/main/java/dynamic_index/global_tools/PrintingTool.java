@@ -1,14 +1,13 @@
 package dynamic_index.global_tools;
 
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /**
  * Takes care of printing utilities.
  */
 public class PrintingTool {
+    public static final String WHITE_SPACE = " ";
 
 
     //=========================  Printing  =====================================//
@@ -59,11 +58,10 @@ public class PrintingTool {
      * @param collection - collection of integers.
      */
     public static void printList(PrintWriter tlog, Collection<?> collection) {
-        tlog.print("[");
         for (Object number : collection) {
-            tlog.print(number.toString() + ",");
+            tlog.print(number.toString() + WHITE_SPACE);
         }
-        tlog.println("]");
+        tlog.println();
     }
 
     /**
@@ -71,10 +69,24 @@ public class PrintingTool {
      * @param list - collection of integers.
      */
     public static void printList(List<?> list) {
-        System.out.print("[");
         for (Object obj : list) {
-            System.out.print(obj.toString() + ",");
+            System.out.print(obj.toString() + WHITE_SPACE);
         }
-        System.out.println("]");
+        System.out.println();
     }
+
+    public static void printMap(Map<?,?> map){
+        for(Map.Entry<?,?> entry: map.entrySet()){
+            System.out.print(entry.getKey() + WHITE_SPACE + entry.getValue());
+        }
+        System.out.println();
+    }
+
+    public static void printMap(PrintWriter tlog, Map<?,?> map){
+        for(Map.Entry<?,?> entry: map.entrySet()){
+            tlog.print(entry.getKey() + WHITE_SPACE + entry.getValue());
+        }
+        tlog.println();
+    }
+
 }

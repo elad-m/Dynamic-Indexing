@@ -34,4 +34,9 @@ public interface IndexWriter {
      * @param ridsToDelete   - review ids to delete. If not in range, will ignore.
      */
     void removeReviews(String indexDirectory, List<Integer> ridsToDelete);
+
+    /**
+     * @return number of reviews indexed, including reviews that have been deleted.
+     */
+    int getNumberOfReviewsIndexed();
 }

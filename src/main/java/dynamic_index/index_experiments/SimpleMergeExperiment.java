@@ -27,17 +27,24 @@ public class SimpleMergeExperiment extends Experiment {
 
         IndexWriter simpleMergeIndexWriter = buildIndex();
         IndexReader indexReader = new IndexReader(allIndexesDirectory);
-//        testWordQueriesOnAverage(indexReader,
-//                simpleMergeIndexWriter,
-//                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
+        testWordQueriesOnAverage(indexReader,
+                simpleMergeIndexWriter,
+                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY),
+                false);
 //        wordsRandomizer.getAllWords());
 
         indexReader = doInsertions(simpleMergeIndexWriter);
 
+        testWordQueriesOnAverage(indexReader,
+                simpleMergeIndexWriter,
+                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY),
+                true);
+
         indexReader = mergeIndex(allIndexesDirectory, (SimpleMergeIndexWriter)simpleMergeIndexWriter, indexReader);
         testWordQueriesOnAverage(indexReader,
                 simpleMergeIndexWriter,
-                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
+                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY),
+                true);
 
         removeIndex();
 

@@ -6,8 +6,8 @@ import dynamic_index.global_tools.PrintingTool;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
 import static dynamic_index.global_tools.MiscTools.ENTIRE_INSERTIONS_MESSAGE;
 import static dynamic_index.global_tools.MiscTools.SINGLE_INSERTION_MESSAGE;
@@ -18,7 +18,7 @@ abstract public class Experiment {
     protected final int NUMBER_OF_REVIEWS_TO_QUERY_META = 2;
     protected final int NUMBER_OF_REVIEWS_TO_QUERY_DELETE = 10;
 
-    protected final int NUMBER_OF_WORDS_TO_QUERY = 50;
+    protected final int NUMBER_OF_WORDS_TO_QUERY = 20;
 
     protected PrintWriter tlog = null;
     protected final int inputScale;
@@ -26,6 +26,7 @@ abstract public class Experiment {
     protected final ScalingCases scalingCases;
     protected final ResultsWriter resultsWriter;
     protected final WordsRandomizer wordsRandomizer;
+    protected final ResultsVerifier resultsVerifier;
     @SuppressWarnings("unused")
     final String indexParentDirectory;
 
@@ -36,6 +37,7 @@ abstract public class Experiment {
         this.scalingCases = new ScalingCases(this.inputScale, logMergeType);
         this.resultsWriter = new ResultsWriter();
         this.wordsRandomizer = new WordsRandomizer(allIndexesDirectory, inputScale);
+        this.resultsVerifier = new ResultsVerifier(localDir, allIndexesDirectory, inputScale);
     }
 
     public abstract void runExperiment();
@@ -44,7 +46,11 @@ abstract public class Experiment {
 
     protected void queryAfterBuildIndex(IndexReader indexReader, IndexWriter indexWriter) {
         tlog.println("===== After Build/Merge... =====");
-        testWordQueriesOnAverage(indexReader, indexWriter, scalingCases.getWordQueries());
+        testWordQueriesOnAverage(indexReader,
+                indexWriter,
+                scalingCases.getWordQueries(),
+                false);
+//                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
         int currentNumberOfReviews = testMetaData(indexReader);
 //        testReviewMetaData(indexReader, currentNumberOfReviews);
     }
@@ -52,17 +58,18 @@ abstract public class Experiment {
     protected IndexReader doInsertions(IndexWriter indexWriter) {
         IndexReader indexReader;
         int currentNumberOfReviews;
-//        List<String> words = Arrays.asList("playful", "aluminum", "airing", "enthusiastic", "sagal", "fakey", "flipping", "lousy", "rigorous", "pedro", "confidence", "inferior", "fortyish", "peopled", "unsold", "per", "disagreeable", "21", "vibrato", "campbells", "hiccups", "symphony", "hermit", "oranges", "w", "balchin", "sidestep", "forgot", "scarest", "europa", "education", "audiencei", "danielle", "km", "nationalism", "stories", "fool", "waifish", "wheelers", "whife", "jacket", "rasps", "disinterestedness", "keeps", "06", "ushers", "cooks", "merda", "establishment", "veneza");
         int numberOfInsertions = scalingCases.getNumberOfInsertionFiles();
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < numberOfInsertions; i++) {
             tlog.println("=====  Index insertion number " + i + "=====");
-            currentNumberOfReviews = insertToIndex(indexWriter, i);
-            indexReader = deleteReviews(indexWriter, currentNumberOfReviews);
+            insertToIndex(indexWriter, i);
+            indexReader = deleteReviews(indexWriter);
+//            indexReader = recreateIndexReader(indexWriter);
             testWordQueriesOnAverage(indexReader,
                     indexWriter,
-                    wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
-//            words);
+                    wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY),
+                    false);
+//            scalingCases.getWordQueries());
 
         }
         PrintingTool.printElapsedTimeToLog(tlog, startTime, ENTIRE_INSERTIONS_MESSAGE);
@@ -78,10 +85,13 @@ abstract public class Experiment {
     }
 
 
-    protected IndexReader deleteReviews(IndexWriter indexWriter, int currentNumberOfReviews) {
+    protected IndexReader deleteReviews(IndexWriter indexWriter) {
         System.out.println("=====" + "Index deletion " + "=====");
         indexWriter.removeReviews(allIndexesDirectory,
-                scalingCases.getRandomRids(NUMBER_OF_REVIEWS_TO_QUERY_DELETE, 1, currentNumberOfReviews));
+                scalingCases.getRandomRids(NUMBER_OF_REVIEWS_TO_QUERY_DELETE,
+                        1,
+                        indexWriter.getNumberOfReviewsIndexed()))
+        ;
         return recreateIndexReader(indexWriter);
     }
 
@@ -118,27 +128,34 @@ abstract public class Experiment {
 
     protected void testWordQueriesOnAverage(IndexReader indexReader,
                                             IndexWriter indexWriter,
-                                            List<String> wordTestCases) {
-        long startTime = System.currentTimeMillis();
+                                            List<String> wordTestCases,
+                                            boolean shouldVerify) {
+//        long startTime = System.currentTimeMillis();
         System.out.print("words queried: ");
         PrintingTool.printList(wordTestCases);
         boolean print = true;
         for (String word : wordTestCases) {
-            Enumeration<Integer> res = indexReader.getReviewsWithToken(word, indexWriter);
-            if(print){
-                printResultsOfQuery(word, res, indexReader, indexWriter);
+            Map<Integer, Integer> resultedPostingsList = indexReader.getReviewsWithToken(word, indexWriter);
+            if(shouldVerify)
+                resultsVerifier.verifySingleQuery(word,
+                        wordsRandomizer.getWordNumber(word),
+                        resultedPostingsList,
+                        indexWriter.getNumberOfReviewsIndexed());
+            if(print && !resultedPostingsList.isEmpty()){ // print one non empty result
+                printResultsOfQuery(word, resultedPostingsList, indexReader, indexWriter);
                 print = false;
             }
         }
-        resultsWriter.addToElapsedList(startTime, wordTestCases.size());
-        String message = "querying " + wordTestCases.size() + " random words";
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, message);
+//        resultsWriter.addToElapsedList(startTime, wordTestCases.size());
+//        String message = "querying " + wordTestCases.size() + " random words";
+//        PrintingTool.printElapsedTimeToLog(tlog, startTime, message);
+
         tlog.println();
     }
 
-    protected void printResultsOfQuery(String word, Enumeration<Integer> res, IndexReader indexReader, IndexWriter indexWriter) {
+    protected void printResultsOfQuery(String word, Map<Integer, Integer> res, IndexReader indexReader, IndexWriter indexWriter) {
         tlog.println(word + ":");
-        printEnumeration(res);
+        PrintingTool.printMap(tlog, res);
 //        if(indexWriter instanceof LogMergeIndexWriter){
 //            LogMergeIndexWriter logMergeIndexWriter = (LogMergeIndexWriter)indexWriter;
 //            tlog.println("#mentions: " + indexReader.getNumberOfMentions(word, logMergeIndexWriter));
@@ -157,14 +174,6 @@ abstract public class Experiment {
     protected void removeIndex() {
         IndexRemover indexRemover = new IndexRemover();
         indexRemover.removeAllIndexFiles(allIndexesDirectory);
-    }
-
-    protected void printEnumeration(Enumeration<?> enumToPrint) {
-        while (enumToPrint.hasMoreElements()) {
-            tlog.print(enumToPrint.nextElement().toString() + " ");
-            tlog.flush();
-        }
-        tlog.println();
     }
 
     protected void printDateAndTime() {

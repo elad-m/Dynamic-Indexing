@@ -23,13 +23,15 @@ public class Main {
 
         System.out.println("======================================= Starting Experiment =======================================");
 
-        SimpleMergeExperiment simpleMergeExperiment =
-                new SimpleMergeExperiment(localDir, 4);
-        simpleMergeExperiment.runExperiment();
+//        SimpleMergeExperiment simpleMergeExperiment =
+//                new SimpleMergeExperiment(localDir, 4);
+//        simpleMergeExperiment.runExperiment();
 
-        LogMergeExperiment logMergeExperiment =
-                new LogMergeExperiment(localDir, 4, 32768);
-        logMergeExperiment.runExperiment();
+        for(int i = 0; i < 5; i++){
+            LogMergeExperiment logMergeExperiment =
+                    new LogMergeExperiment(localDir, 4, 32768);
+            logMergeExperiment.runExperiment();
+        }
 
 
     }

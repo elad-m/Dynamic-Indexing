@@ -8,14 +8,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class WordsRandomizer {
 
     private final Map<Integer, String> wordIdToString;
+    private final Map<String, Integer> swapped;
 
     public WordsRandomizer(String indexDirectoryName, int inputScale){
         File indexDirectory = new File(indexDirectoryName);
         this.wordIdToString = loadWordsMapFromFileOutSideIndex(indexDirectory, inputScale);
+        swapped = wordIdToString.entrySet().stream().collect(
+                Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
     }
 
     public List<String> getRandomWords(int numOfWords) {
@@ -30,6 +34,13 @@ public class WordsRandomizer {
             }
         }
         return randomWords;
+    }
+
+    public int getWordNumber(String word){
+        if(swapped.containsKey(word))
+            return swapped.get(word);
+        else
+            return -1;
     }
 
     public List<String> getAllWords() {

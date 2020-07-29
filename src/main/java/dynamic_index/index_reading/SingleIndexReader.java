@@ -51,6 +51,7 @@ public class SingleIndexReader {
                 MiscTools.INTEGER_SIZE + FRONT_CODE_WITHOUT_STRING_POINTER_ROW_SIZE;
     }
 
+
     public TreeMap<Integer, Integer> getReviewsWithWord(String word) {
         try {
             assert word != null;

@@ -263,6 +263,11 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         IndexInvalidationTool.addToInvalidationFile(indexDirectory, ridsToDelete);
     }
 
+    @Override
+    public int getNumberOfReviewsIndexed(){
+        return reviewCounter;
+    }
+
     /**
      * Merges all indexes into one index.
      * NOTE: Should not touch the review meta data writer at all, or at least close it.

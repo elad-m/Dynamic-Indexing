@@ -157,6 +157,11 @@ public class LogMergeIndexWriter implements IndexWriter{
         reviewCounter++;
     }
 
+    @Override
+    public int getNumberOfReviewsIndexed(){
+        return reviewCounter;
+    }
+
     private class TemporaryIndex {
 
         private final TreeMap<String, InvertedIndex> wordToInvertedIndexMap = new TreeMap<>();
@@ -281,4 +286,5 @@ public class LogMergeIndexWriter implements IndexWriter{
         }
 
     }
+
 }

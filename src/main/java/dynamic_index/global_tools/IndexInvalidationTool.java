@@ -91,6 +91,7 @@ public class IndexInvalidationTool {
         }
     }
 
+
     private static File getInvalidationFile(String allIndexDirectory){
         return  new File(allIndexDirectory + File.separator + MiscTools.INVALIDATION_FILENAME);
     }

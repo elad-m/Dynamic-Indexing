@@ -41,29 +41,12 @@ public class LogMergeExperiment extends Experiment{
         IndexReader indexReader = new IndexReader(allIndexesDirectory, true);
         queryAfterBuildIndex(indexReader, logMergeIndexWriter);
 
-//        System.out.print("words queried: ");
-//        List<String> wordTestCases = scalingCases.getWordQueries();
-//        PrintingTool.printCollection(wordTestCases);
-//
-//        for (String word : wordTestCases) {
-//            Enumeration<Integer> res = indexReader.getReviewsWithToken(word, logMergeIndexWriter);
-//            printResultsOfQuery(word, res, indexReader, logMergeIndexWriter);
-//        }
-
-//        int currentNumberOfReviews;
-//        int numberOfInsertions = scalingCases.getNumberOfInsertionFiles();
-//        for (int i = 0; i < numberOfInsertions; i++) {
-//            tlog.println("=====  Index insertion number " + i + "=====");
-//            currentNumberOfReviews = insertToIndex(logMergeIndexWriter, i);
-//            indexReader = deleteReviews(logMergeIndexWriter, currentNumberOfReviews);
-//
-//            for (String word : wordTestCases) {
-//                Enumeration<Integer> res = indexReader.getReviewsWithToken(word, logMergeIndexWriter);
-//                printResultsOfQuery(word, res, indexReader, logMergeIndexWriter);
-//            }
-//        }
-
         indexReader = doInsertions(logMergeIndexWriter);
+//        tlog.println("Query in the end");
+//        testWordQueriesOnAverage(indexReader,
+//                logMergeIndexWriter,
+//                scalingCases.getWordQueries(),
+//                true);
 
         removeIndex();
         resultsWriter.writeResults("Log merge results", tlog);

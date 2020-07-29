@@ -162,17 +162,18 @@ public class IndexReader {
      * If index writer is a log-merge one, then we also union on the in-memory index of it as well.
      * @param token - token to find its postings list.
      * @param indexWriter - index writer.
-     * @return  Returns an empty Enumeration if there are no reviews containing this token
+     * @return  Returns an empty list if there are no reviews containing this token
      */
-    public Enumeration<Integer> getReviewsWithToken(String token,
-                                                    IndexWriter indexWriter){
+    public Map<Integer, Integer> getReviewsWithToken(String token,
+                                             IndexWriter indexWriter){
         Map<Integer, Integer>  postingList;
         if(indexWriter instanceof LogMergeIndexWriter){
             postingList = getPostingsListOfToken(token, (LogMergeIndexWriter)indexWriter);
         } else {
             postingList = getPostingsListOfToken(token);
         }
-        return mapToEnumeration(postingList);
+//        return mapToEnumeration(postingList);
+        return postingList;
     }
 
     private Map<Integer,Integer> getPostingsListOfToken(String token){
@@ -214,14 +215,24 @@ public class IndexReader {
         unionOfResults.putAll(mainResults);
     }
 
-    private Enumeration<Integer> mapToEnumeration(Map<Integer, Integer> unionOfResults) {
-        Vector<Integer> toEnumerate = new Vector<>();
+//    private Enumeration<Integer> mapToEnumeration(Map<Integer, Integer> unionOfResults) {
+//        Vector<Integer> toEnumerate = new Vector<>();
+//        for (Map.Entry<Integer, Integer> entry : unionOfResults.entrySet()) {
+//            toEnumerate.add(entry.getKey());
+//            toEnumerate.add(entry.getValue());
+//        }
+//        return toEnumerate.elements();
+//    }
+
+    private List<Integer> mapToList(Map<Integer, Integer> unionOfResults) {
+        List<Integer> toList = new ArrayList<>();
         for (Map.Entry<Integer, Integer> entry : unionOfResults.entrySet()) {
-            toEnumerate.add(entry.getKey());
-            toEnumerate.add(entry.getValue());
+            toList.add(entry.getKey());
+            toList.add(entry.getValue());
         }
-        return toEnumerate.elements();
+        return toList;
     }
+
 
     /*
      * The following 4 methods are here in any cases but most times shouldn't be used.
