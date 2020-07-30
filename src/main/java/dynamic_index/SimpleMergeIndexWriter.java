@@ -103,15 +103,12 @@ public class SimpleMergeIndexWriter implements IndexWriter{
     }
 
     private void constructTermToTermIDMapping(String inputFile) throws IOException {
-//        System.out.println("Starting term mapping:");
         Set<String> wordTerms = getTermsSorted(inputFile); // first reading of whole input file
         createMappingForSet(wordTerms, wordTermToTermID);
         wordTerms.clear();
     }
 
     private Set<String> getTermsSorted(String inputFile) throws IOException {
-//        long startTime = System.currentTimeMillis();
-
         BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
         Set<String> wordTerms = new TreeSet<>();
 
@@ -131,9 +128,6 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         }
 
         bufferedReaderOfRawInput.close();
-//        System.out.print("token counter: " + tokenCounter);
-//        System.out.format("\twordTerms.size(): %d\n", wordTerms.size());
-//        PrintingTool.printElapsedTime(startTime, "Building set of words");
         return wordTerms;
     }
 
@@ -157,9 +151,6 @@ public class SimpleMergeIndexWriter implements IndexWriter{
     }
 
     private void firstSortIteration(String inputFile, int initialReviewCounter) throws IOException {
-//        System.out.println("First sort iteration...");
-        long blockWriterStartTime = System.currentTimeMillis();
-
         BufferedReader bufferedReaderOfRawInput = new BufferedReader(new FileReader(inputFile));
         wordsTermToReviewBlockWriter = new TermToReviewBlockWriter(currentIndexDirectory.getAbsolutePath(), tokenCounter);
         resetReviewCounterTo(initialReviewCounter);
@@ -178,7 +169,6 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         //closing first iteration
         bufferedReaderOfRawInput.close();
         wordsTermToReviewBlockWriter.closeWriter();
-        PrintingTool.printElapsedTime(blockWriterStartTime, "First Sort Iteration Time: ");
     }
 
     private void handleLine(String field, String value, StringBuilder reviewConcatFields){
@@ -240,7 +230,7 @@ public class SimpleMergeIndexWriter implements IndexWriter{
 
         // words
         int readBlockSize = estimateBestSizeOfWordsBlocks(tokenCounter, false);
-        wordsDataIndexWriter.writeFromSortedFileByBlocks(BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK, readBlockSize, wordsTermIdToTerm, numberOfReviewsToCurrentlyWrite);
+        wordsDataIndexWriter.writeFromSortedFileByBlocks(BASE_NUM_OF_TOKENS_IN_FRONT_CODE_BLOCK, readBlockSize, wordsTermIdToTerm);
 
         deleteSortedFile(currentIndexDirectory);
     }
@@ -265,7 +255,7 @@ public class SimpleMergeIndexWriter implements IndexWriter{
 
     @Override
     public int getNumberOfReviewsIndexed(){
-        return reviewCounter;
+        return reviewCounter - 1;
     }
 
     /**
@@ -283,7 +273,6 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         IndexRemover indexRemover = new IndexRemover();
         indexRemover.removeFilesAfterMerge(allIndexesDirectory.getAbsolutePath());
         moveMergedFilesToMainIndex(mergedDirectory);
-//        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
     }
 
     private void emptyInvalidationFile() {

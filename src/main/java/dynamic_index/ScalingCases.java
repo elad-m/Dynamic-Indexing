@@ -4,28 +4,13 @@ import dynamic_index.global_tools.MiscTools;
 import dynamic_index.global_tools.ParsingTool;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 @SuppressWarnings("SpellCheckingInspection")
 public class ScalingCases {
 
-    final String[] e2InQueries = {"friend", "0", "asdfasdf"};
-    final String[] e2NotInQuery = {"kookie", "storebaught", "nonesenseeee", "woordss"};
-    final String[] we3 = {"koreaa", "0", "zzzzzzzzzzzzzz", "zzzzz", "1", "the"};
-    final String[] nwe3 = {"kookie", "storebaught", "juli", "launchea", "zzzzzzzzzzzzzz", "zoomings"};
-
-    final String[] e1 = {"0", "cuban", "friend", "for", "newpaperman", "glamor", "y",
-            "aaa", "kindred", "romantic", "atmosphere", "hearted", "posh"};
-    final String[] inse1 = {"y", "aaa", "kindred", "romantic", "atmosphere", "hearted", "posh"};
-    final String[] delWordse1 = {"cuban", "newpaperman", "glamor", "aaa", "friend", "romantic", "posh"};
-    final int[] delReviews1 = new int[]{1, 5, 10, 11, 13};
-    final int[] metaReview1 = new int[]{-1, 20, 0, 1, 16, 13};
-
-//    final String[] we4 = {"zzzzzzzzzzzzzzzzz", "0", "zzzzzzzzzzzzzz", "a", "to", "in"};
-    final String[] we4 = {"everyone", "studies", "weekends", "musical", "care"};
+    final String[] we4 = {"zzzzzzzzzzzzzzzzz", "0", "zzzzzzzzzzzzzz", "a", "to", "in"};
+//    final String[] we4 = {"everyone", "studies", "weekends", "musical", "care"};
 //    ,
 //            "africanism", "grotta", "acheerleader",
 //            "slinkyness", "amazoni", "epesode", "zaius"};
@@ -46,12 +31,6 @@ public class ScalingCases {
     final int[] delReviews6 = new int[]{};
     final int[] metaReview6 = {1000001, 0, -2, 1, 1000000, 500000};
 
-    final String[] we7 = {"0", "zzzzzzzzzzzzzz", "kohut", "1", "out"};
-    final String[] inse7 = {};
-    final String[] delWords7 = {};
-    final int[] delReviews7 = new int[]{};
-    final int[] metaReview7 = {1000001, 0, -2, 1, 1000000, 500000};
-
 
     final String INSERTION_DIR_E1 = "E1TestResources";
     static final String MOVIE_REVIEWS_4 = "constructE4.txt";
@@ -70,40 +49,22 @@ public class ScalingCases {
     static final String LOG_MOVIE_REVIEWS_5 = "logMoviesE5.txt";
     static final String LOG_MOVIE_REVIEWS_6 = MOVIE_REVIEWS_6;
 
-    private String[] wordQueries = e1;
+    private String[] wordQueries = we4;
     //    private String[] insertQueries = inse1;
 //    private String[] delQueries = delWordse1;
-    private int[] delReviews = delReviews1;
-    private int[] metaRev = metaReview1;
+    private int[] delReviews = delReviews4;
+    private int[] metaRev = metaReview4;
 
     private final int testType;
     private final String inputFilename;
     private File insertDirectory;
     private final File[] insertFiles;
 
+    private final HashSet<Integer> alreadyDeletedRids = new HashSet<>();
+
     public ScalingCases(int eType, boolean logMergType) {
         this.testType = eType;
         switch (eType) {
-            case 1:
-                wordQueries = e1;
-//                if (logMergType)
-//                    inputFilename = LOG_MOVIE_REVIEWS_1;
-//                else
-                    inputFilename = MOVIE_REVIEWS_1;
-                delReviews = delReviews1;
-                metaRev = metaReview1;
-                insertDirectory = new File(INSERTION_DIR_E1);
-                insertFiles = getInsertFileNames();
-                break;
-            case 3:
-                wordQueries = we3;
-//                if (logMergType)
-//                    inputFilename = LOG_MOVIE_REVIEWS_4;
-//                else
-                inputFilename = MOVIE_REVIEWS_3;
-                insertDirectory = new File(INSERTION_DIR_E4);
-                insertFiles = getInsertFileNames();
-                break;
             case 4:
                 wordQueries = we4;
 //                if (logMergType)
@@ -156,6 +117,20 @@ public class ScalingCases {
             randomRids.add(MiscTools.getRandomNumber(lower, upper));
         }
         return randomRids;
+    }
+
+    public List<Integer> getRandomRidsNoRepetition(int numberOfReviewsToGet,
+                                                   int lower,
+                                                   int upper){
+        List<Integer> randomRids = new ArrayList<>();
+        while(randomRids.size() < numberOfReviewsToGet){
+            int ridCandidate = MiscTools.getRandomNumber(lower, upper);
+            if (!alreadyDeletedRids.contains(ridCandidate)) {
+                randomRids.add((ridCandidate));
+            }
+        }
+        return randomRids;
+
     }
 
     private File[] getInsertFileNames() {

@@ -14,41 +14,44 @@ import static dynamic_index.global_tools.MiscTools.SIMPLE_FIRST_BUILD;
 public class SimpleMergeExperiment extends Experiment {
 
 
-    public SimpleMergeExperiment(String localDir, int inputScale) {
+    public SimpleMergeExperiment(String localDir, int inputScale, boolean shouldVerify) {
         super(localDir,
                 localDir + File.separatorChar + MiscTools.INDEXES_DIR_NAME,
                 inputScale,
-                false);
+                false,
+                shouldVerify);
     }
 
     @Override
     public void runExperiment() {
         initiateExperiment();
 
+        // build from scratch of 40% of the reviews
         IndexWriter simpleMergeIndexWriter = buildIndex();
         IndexReader indexReader = new IndexReader(allIndexesDirectory);
-        testWordQueriesOnAverage(indexReader,
-                simpleMergeIndexWriter,
-                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY),
-                false);
-//        wordsRandomizer.getAllWords());
+        queryAfterBuildIndex(indexReader, simpleMergeIndexWriter);
 
+        // insertions of 240 files
         indexReader = doInsertions(simpleMergeIndexWriter);
 
+        // testing average query time before merge (i.e. having 240 auxiliary indexes + main index)
         testWordQueriesOnAverage(indexReader,
                 simpleMergeIndexWriter,
-                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY),
-                true);
+                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY)
+        );
 
+        // merging and testing average time again
         indexReader = mergeIndex(allIndexesDirectory, (SimpleMergeIndexWriter)simpleMergeIndexWriter, indexReader);
         testWordQueriesOnAverage(indexReader,
                 simpleMergeIndexWriter,
-                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY),
-                true);
+                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY)
+        );
 
+        // removing the index directory and files in it.
         removeIndex();
 
-        resultsWriter.writeResults("Simple merge results", tlog);
+        // printing the average query time
+        resultsWriter.printResults("Simple merge results", tlog);
 
         tlog.close();
     }

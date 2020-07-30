@@ -1,5 +1,3 @@
-import dynamic_index.global_tools.MiscTools;
-import dynamic_index.global_tools.ParsingTool;
 import dynamic_index.global_tools.PrintingTool;
 import dynamic_index.index_experiments.LogMergeExperiment;
 import dynamic_index.index_experiments.SimpleMergeExperiment;
@@ -7,7 +5,6 @@ import dynamic_index.index_experiments.SimpleMergeExperiment;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 
@@ -23,16 +20,15 @@ public class Main {
 
         System.out.println("======================================= Starting Experiment =======================================");
 
-//        SimpleMergeExperiment simpleMergeExperiment =
-//                new SimpleMergeExperiment(localDir, 4);
-//        simpleMergeExperiment.runExperiment();
+        SimpleMergeExperiment simpleMergeExperiment =
+                new SimpleMergeExperiment(localDir, 5, false);
+        simpleMergeExperiment.runExperiment();
 
-        for(int i = 0; i < 5; i++){
-            LogMergeExperiment logMergeExperiment =
-                    new LogMergeExperiment(localDir, 4, 32768);
-            logMergeExperiment.runExperiment();
-        }
-
+        testTempSize(localDir,5,false);
+//        LogMergeExperiment logMergeExperiment =
+//                new LogMergeExperiment(localDir, 5, 32768, false);
+//        logMergeExperiment.runExperiment();
+//
 
     }
 
@@ -95,13 +91,13 @@ public class Main {
         }
     }
 
-    private static void testTempSize(String localDir) {
+    private static void testTempSize(String localDir, int inputScale, boolean shouldVerify) {
         //testing temporary index size
         int[] tempIndexSizes = {1024, 1024, 8192, 32768, 131072, 1048576, 4194304, 4 * 4194304};
 //        int[] tempIndexSizes = {1048576};
         LogMergeExperiment logMergeExperiment;
         for (int tempSize : tempIndexSizes) {
-            logMergeExperiment = new LogMergeExperiment(localDir, 5, tempSize);
+            logMergeExperiment = new LogMergeExperiment(localDir, inputScale, tempSize, shouldVerify);
             logMergeExperiment.runExperiment();
         }
     }

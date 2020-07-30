@@ -29,7 +29,7 @@ public class ReviewsMetaDataIndexReader {
         loadFileToMap();
         Set<Integer> invalidatedRids = IndexInvalidationTool.getInvalidationSet(this.reviewMetaDataFile.getParent());
         ridToMetaDataMap.keySet().removeAll(invalidatedRids);
-        assert reviewMetaDataFile.exists();
+
     }
 
     private void loadFileToMap() {
@@ -60,7 +60,7 @@ public class ReviewsMetaDataIndexReader {
     }
 
     /**
-     * Called when doing an index merging. Rewrites the invalidation file, filtering deleted rid and their data.
+     * Called when doing an index merging.
      * Writes to a temporary file, deletes the previous file, renames temp to original name and reassigns
      * to data member.
      */

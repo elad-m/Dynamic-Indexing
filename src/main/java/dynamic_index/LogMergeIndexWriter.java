@@ -146,9 +146,11 @@ public class LogMergeIndexWriter implements IndexWriter{
         if (invertedIndex == null) { // not found, return empty
             ridToFrequencies = new TreeMap<>();
         } else {
-            assert !invertedIndex.isWithFile();
             ridToFrequencies = invertedIndex.getRidToFrequencyMap();
             IndexInvalidationTool.filterResults(allIndexesDirectory.getAbsolutePath(), ridToFrequencies);
+            if(invertedIndex.getRidToFrequencyMap().isEmpty()){
+                System.err.println(" DEBUG shou;aldjf;lajdf");
+            }
         }
         return ridToFrequencies;
     }
@@ -159,7 +161,7 @@ public class LogMergeIndexWriter implements IndexWriter{
 
     @Override
     public int getNumberOfReviewsIndexed(){
-        return reviewCounter;
+        return reviewCounter - 1;
     }
 
     private class TemporaryIndex {

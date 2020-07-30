@@ -172,7 +172,6 @@ public class IndexReader {
         } else {
             postingList = getPostingsListOfToken(token);
         }
-//        return mapToEnumeration(postingList);
         return postingList;
     }
 
@@ -213,24 +212,6 @@ public class IndexReader {
                         mainNumOfWordsInFrontCodeBlock, mainIndexDirectory);
         TreeMap<Integer, Integer> mainResults = singleIndexReader.getReviewsWithWord(token);
         unionOfResults.putAll(mainResults);
-    }
-
-//    private Enumeration<Integer> mapToEnumeration(Map<Integer, Integer> unionOfResults) {
-//        Vector<Integer> toEnumerate = new Vector<>();
-//        for (Map.Entry<Integer, Integer> entry : unionOfResults.entrySet()) {
-//            toEnumerate.add(entry.getKey());
-//            toEnumerate.add(entry.getValue());
-//        }
-//        return toEnumerate.elements();
-//    }
-
-    private List<Integer> mapToList(Map<Integer, Integer> unionOfResults) {
-        List<Integer> toList = new ArrayList<>();
-        for (Map.Entry<Integer, Integer> entry : unionOfResults.entrySet()) {
-            toList.add(entry.getKey());
-            toList.add(entry.getValue());
-        }
-        return toList;
     }
 
 

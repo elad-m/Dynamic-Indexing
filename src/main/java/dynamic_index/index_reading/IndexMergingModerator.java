@@ -46,19 +46,19 @@ public class IndexMergingModerator {
         if (minimumQueue == null) {
             currMinPair = null;
         } else {
-            currMinPair = minimumQueue.poll(); // actual removal from data-structure;
+            currMinPair = minimumQueue.poll(); // actual removal from data-structure
         }
         return currMinPair;
     }
 
     private SingleIndexReaderQueue getMinimumQueue() {
-        SingleIndexReaderQueue minQueue = getFirstNotDoneQueue();
+        SingleIndexReaderQueue minQueue = getFirstNotFinishedQueue();
 
         if (minQueue == null) { // all files have been read and written to output buffer
             return null;
         } else {
             for (SingleIndexReaderQueue currentQueue : singleIndexReaderQueues) {
-                if (currentQueue.isQueueNotDone()) {
+                if (currentQueue.isNotFinishedIndexQueue()) {
                     Map.Entry<String, InvertedIndex> minPairForCurrentQueue = currentQueue.peek();
                     assert minPairForCurrentQueue != null;
                     Map.Entry<String, InvertedIndex> prevMinPair = minQueue.peek();
@@ -73,18 +73,24 @@ public class IndexMergingModerator {
 
     private int compareWordAndInvertedIndexEntries(Map.Entry<String, InvertedIndex> entry1,
                                                    Map.Entry<String, InvertedIndex> entry2){
-        if(entry1.getKey().compareTo(entry2.getKey()) < 0){
+        int wordsCompareResult = entry1.getKey().compareTo(entry2.getKey());
+        if(wordsCompareResult < 0){
             return -1;
-        } else if (entry1.getKey().compareTo(entry2.getKey()) > 0){
+        } else if (wordsCompareResult > 0){
             return 1;
         } else { // the same words, compare by inverted index
-            return entry1.getValue().compareTo(entry2.getValue());
+            int invertedIndexCompareResult = entry1.getValue().compareTo(entry2.getValue());
+            // next line: two different indexes has the same word with the same rid.
+            if(!entry1.getValue().getIndexName().equals(entry2.getValue().getIndexName())
+                    && invertedIndexCompareResult == 0)
+                System.err.println("DEBUG two indexes with the same review");
+            return invertedIndexCompareResult;
         }
     }
 
-    private SingleIndexReaderQueue getFirstNotDoneQueue() {
+    private SingleIndexReaderQueue getFirstNotFinishedQueue() {
         for (SingleIndexReaderQueue queue : singleIndexReaderQueues) {
-            if (queue.isQueueNotDone()) {
+            if (queue.isNotFinishedIndexQueue()) {
                 return queue;
             }
         }

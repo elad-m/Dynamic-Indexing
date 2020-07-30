@@ -61,8 +61,6 @@ public class MiscTools {
         long estimatedSizeOfFile = numOfTokens * MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
         long blockSize = calculateSizeOfBlock(estimatedSizeOfFile); // IN BYTES
         long blockSizeInPairs = blockSize / 8;
-//        System.out.println("blockSize in BYTES:" + blockSize);
-//        System.out.println("blockSize in PAIRS:" + blockSizeInPairs);
         assert blockSizeInPairs <= Integer.MAX_VALUE;
         return (int) blockSizeInPairs;
     }

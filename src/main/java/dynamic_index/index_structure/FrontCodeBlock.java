@@ -16,7 +16,6 @@ public class FrontCodeBlock {
 
     final int frontCodeBlockTokenCapacity;
 
-//    private final TreeMap<String, InvertedIndexOfWord> blockOfTokensAndData;
     private final StringBuilder compressedString = new StringBuilder();
     private byte[] stringPointer;
     private final byte[] lengthsInBlock;

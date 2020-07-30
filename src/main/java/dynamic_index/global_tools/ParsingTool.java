@@ -19,7 +19,6 @@ public class ParsingTool {
      */
     public static List<String> textToNormalizedTokens(String reviewTextLine) {
         List<String> filteredTokens = new ArrayList<>();
-//        String[] tokens = reviewTextLine.split("[^a-zA-Z0-9]+"); // alphanumeric
         List<String> tokens = splitByNonAlphaNumeric(reviewTextLine);
         for (String token : tokens) {
             if (!token.equals("")) // no empty
@@ -44,6 +43,7 @@ public class ParsingTool {
         }
         if(currentToken.length() > 0)
             tokens.add(currentToken.toString());
+        assert !tokens.contains("");
         return tokens;
     }
 
@@ -56,4 +56,5 @@ public class ParsingTool {
         String[] splitHelpfulness = value.split("/");
         return splitHelpfulness[0] + WHITE_SPACE_SEPARATOR + splitHelpfulness[1];
     }
+
 }

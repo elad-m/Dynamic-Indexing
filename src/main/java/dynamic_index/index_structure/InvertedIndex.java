@@ -20,7 +20,6 @@ public class InvertedIndex implements WritingMeasurable, Comparable<InvertedInde
     private final String word;
     private final String indexName;
 
-
     /**
      * Essentially the inverted index.
      * Except for boolean values, all the fields below are initialized to null/zero right after writing to a file.
@@ -31,15 +30,6 @@ public class InvertedIndex implements WritingMeasurable, Comparable<InvertedInde
     private int numOfReviews = 0;
 
     private boolean finishedWriting = false;
-
-    //Fields for writing to a file if necessary (for common words)
-//    private final File indexDirectory;
-//    private File ridDumpFile;
-//    private File freqDumpFile;
-//    private DataOutputStream dosRawRidDumpFile;
-//    private DataOutputStream dosRawFreqDumpFile;
-//    private boolean withFile = false;
-//    private int firstRidInFile;
 
 
     /**
@@ -195,17 +185,17 @@ public class InvertedIndex implements WritingMeasurable, Comparable<InvertedInde
     }
 
     /**
-     * @return true if this class is also written to files, or false if all data is in-memory
+     * @return - the name of the directory in which the inverted index is
      */
-    public boolean isWithFile() {
-        return false;
+    public String getIndexName(){
+        return indexName;
     }
 
     /**
      * @return - in-memory data structure of this class.
      */
     public TreeMap<Integer, Integer> getRidToFrequencyMap() {
-        return ridToFrequencyMap;
+        return (TreeMap<Integer, Integer>) ridToFrequencyMap.clone();
     }
 
     @Override

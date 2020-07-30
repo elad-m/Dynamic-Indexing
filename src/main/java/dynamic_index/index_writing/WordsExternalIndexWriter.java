@@ -60,22 +60,17 @@ public class WordsExternalIndexWriter {
      * @param readBlockSizeInPairs - the size of a block to read from  the sorted file.
      * @param termIdToTerm - mapping of termId to term so we can know what words are represented in the sorted
      *                     file by a tid
-     * @param numberOfReviews -
      */
     public void writeFromSortedFileByBlocks(int numOfTokensInFrontCodeBlock,
                                             int readBlockSizeInPairs,
-                                            Map<Integer, String> termIdToTerm,
-                                            int numberOfReviews) {
+                                            Map<Integer, String> termIdToTerm) {
         this.numOfTokensInFrontCodeBlock = numOfTokensInFrontCodeBlock;
-//        InvertedIndex.MAX_NUM_OF_PAIRS = InvertedIndex.BASE_MAX_NUM_OF_PAIRS * Math.max(1, numberOfReviews / 1000);
-//        System.out.println("MAX_NUM_OF_PAIRS Words: " + InvertedIndex.MAX_NUM_OF_PAIRS);
 
         int readingBlockSizeInBytes = readBlockSizeInPairs * MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
         instantiateIndexFiles(readingBlockSizeInBytes);
         File sortedFile = new File(indexDirectory + File.separator
                 + MiscTools.WORDS_SORTED_FILE_NAME);
 
-        System.out.println("reading block size in WORDS writer in bytes: " + readingBlockSizeInBytes);
         writeFromSortedFileByBlocks(sortedFile, readingBlockSizeInBytes, termIdToTerm);
     }
 

@@ -81,7 +81,7 @@ public class IndexInvalidationTool {
      * @param allIndexesDirectory - the directory where all the index directories and files are.
      * @param unfilteredResults - rids to frequency, to filter out the entries with deleted rids.
      */
-    public static void filterResults(String allIndexesDirectory, TreeMap<Integer, Integer> unfilteredResults) {
+    public static void filterResults(String allIndexesDirectory, Map<Integer, Integer> unfilteredResults) {
         Set<Integer> invalidationSet = getInvalidationSet(allIndexesDirectory);
         for (Iterator<Map.Entry<Integer, Integer>> it = unfilteredResults.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Integer, Integer> entry = it.next();

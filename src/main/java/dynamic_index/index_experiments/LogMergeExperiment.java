@@ -1,6 +1,5 @@
 package dynamic_index.index_experiments;
 
-import dynamic_index.IndexRemover;
 import dynamic_index.IndexWriter;
 import dynamic_index.LogMergeIndexWriter;
 import dynamic_index.IndexReader;
@@ -14,8 +13,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Enumeration;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static dynamic_index.global_tools.MiscTools.*;
@@ -25,11 +22,12 @@ public class LogMergeExperiment extends Experiment{
 
 
     private final int TEMP_INDEX_SIZE;
-    public LogMergeExperiment(String localDir, int inputScale, int tempIndexSize) {
+    public LogMergeExperiment(String localDir, int inputScale, int tempIndexSize, boolean shouldVerify) {
         super(localDir,
                 localDir + File.separatorChar + MiscTools.LOG_MERGE_INDEXES_DIR_NAME,
                 inputScale,
-                true);
+                true,
+                shouldVerify);
         TEMP_INDEX_SIZE = tempIndexSize;
     }
 
@@ -37,19 +35,20 @@ public class LogMergeExperiment extends Experiment{
     public void runExperiment() {
         initiateExperiment();
 
+        // build from scratch of 40% of the reviews
         IndexWriter logMergeIndexWriter = buildIndex();
         IndexReader indexReader = new IndexReader(allIndexesDirectory, true);
         queryAfterBuildIndex(indexReader, logMergeIndexWriter);
 
+        // insertions of 240 files
         indexReader = doInsertions(logMergeIndexWriter);
-//        tlog.println("Query in the end");
-//        testWordQueriesOnAverage(indexReader,
-//                logMergeIndexWriter,
-//                scalingCases.getWordQueries(),
-//                true);
 
+        // removing the index directory and files in it.
         removeIndex();
-        resultsWriter.writeResults("Log merge results", tlog);
+
+        // printing the average query time
+        resultsWriter.printResults("Log merge results", tlog);
+
         tlog.close();
     }
 

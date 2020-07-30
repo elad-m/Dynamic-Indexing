@@ -16,7 +16,7 @@ public class ResultsWriter {
         currentElapsedList.add(elapsedTimeMilliSeconds);
     }
 
-    public void writeResults(String message, PrintWriter tlog){
+    public void printResults(String message, PrintWriter tlog){
         tlog.println(message);
         PrintingTool.printList(tlog, currentElapsedList);
     }

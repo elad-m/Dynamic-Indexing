@@ -51,7 +51,6 @@ public class TermToReviewBlockWriter {
         String BINARY_FILE_SUFFIX = ".bin";
         String newFileName = mergeFilesDirectory.getPath() + File.separator
                 + FILE_NAME_PATTERN + numOfFilesCreated + BINARY_FILE_SUFFIX;
-//        System.out.println("NEW FILE IN WRITER #" + numOfFilesCreated);
         try {
             currentFileBOF = new BufferedOutputStream(new FileOutputStream(newFileName), BLOCK_SIZE_IN_BYTES);
         } catch (FileNotFoundException e) {
@@ -107,7 +106,6 @@ public class TermToReviewBlockWriter {
             }
             termIdReviewIdPairs.clear(); // for the while loop in the calling function
         } else {
-//            System.out.println("<USED BUFFER WRITING>");
             int batchSize = getBatchSize(termIdReviewIdPairs.size()); // in pairs
             int listInBytesSize = MiscTools.PAIR_OF_INT_SIZE_IN_BYTES * batchSize;
             listInBytes = new byte[listInBytesSize];
@@ -117,7 +115,6 @@ public class TermToReviewBlockWriter {
                     break;
                 }
                 insertPairToByteArray(listInBytes, writeToByteArrayOffset, termIdReviewIdPair);
-//                iterator.remove();
                 writeToByteArrayOffset += MiscTools.PAIR_OF_INT_SIZE_IN_BYTES;
             }
             if (batchSize > 0) {

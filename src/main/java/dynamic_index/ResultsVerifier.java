@@ -10,6 +10,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 /**
@@ -63,13 +64,13 @@ public class ResultsVerifier {
         if (wordNumber == -1) { // if a word doesn't exists we should get empty list
             assertResultsEmpty(word, actualResult);
         }
-        TreeMap<Integer, Integer> trueResult = getVerifiedResult(word, wordNumber, reviewNumberSoFar);
+        SortedMap<Integer, Integer> trueResult = getVerifiedResult(word, wordNumber, reviewNumberSoFar);
         assertResultsSameLength(word, trueResult, actualResult);
 
         for (Map.Entry<Integer, Integer> actualEntry: actualResult.entrySet()) {
             int actualRid = actualEntry.getKey();
-            int actualeFreq = actualEntry.getValue();
-            if (areBadResults(word, trueResult, actualRid, actualeFreq)) {
+            int actualFreq = actualEntry.getValue();
+            if (areBadResults(word, trueResult, actualRid, actualFreq)) {
                 System.err.println("Bad Assertion, actual:");
                 PrintingTool.printMap(actualResult);
                 break;
@@ -77,7 +78,7 @@ public class ResultsVerifier {
         }
     }
 
-    private boolean areBadResults(String word, TreeMap<Integer, Integer> trueResult, int actualRid, int actualeFreq) {
+    private boolean areBadResults(String word, SortedMap<Integer, Integer> trueResult, int actualRid, int actualeFreq) {
         boolean isBad;
         if(!trueResult.containsKey(actualRid)){
             System.err.format(word + ": " + "actual rid-%d not found in true file.\n", actualRid);
@@ -97,7 +98,7 @@ public class ResultsVerifier {
     }
 
     private void assertResultsSameLength(String word,
-                                         TreeMap<Integer, Integer> trueRidFreqList,
+                                         SortedMap<Integer, Integer> trueRidFreqList,
                                          Map<Integer, Integer> actualResult) {
         if (trueRidFreqList.size() != actualResult.size()) {
             System.err.println(word + ": Results not the same length:");
@@ -112,9 +113,9 @@ public class ResultsVerifier {
     }
 
 
-    private TreeMap<Integer, Integer> getVerifiedResult(String word, int wordNumber, int reviewNumberSoFar) {
+    private SortedMap<Integer, Integer> getVerifiedResult(String word, int wordNumber, int reviewNumberSoFar) {
         TreeMap<Integer, Integer> wholeVerifiedPostingsList = getWholePostingsList(word, wordNumber);
-        TreeMap<Integer, Integer> verifiedTrimmedToActualNumberOfReviews = trimToActualNumberOfReviews(wholeVerifiedPostingsList, reviewNumberSoFar);
+        SortedMap<Integer, Integer> verifiedTrimmedToActualNumberOfReviews = trimToActualNumberOfReviews(wholeVerifiedPostingsList, reviewNumberSoFar);
         if (IndexInvalidationTool.isInvalidationDirty()) {
             IndexInvalidationTool.filterResults(allIndexesDirectory
                     , verifiedTrimmedToActualNumberOfReviews);
@@ -122,8 +123,8 @@ public class ResultsVerifier {
         return verifiedTrimmedToActualNumberOfReviews;
     }
 
-    private TreeMap<Integer, Integer> trimToActualNumberOfReviews(TreeMap<Integer, Integer> wholeVerifiedPostingsList, int reviewNumberSoFar) {
-        return (TreeMap<Integer, Integer>) wholeVerifiedPostingsList.subMap(0, reviewNumberSoFar);
+    private SortedMap<Integer, Integer> trimToActualNumberOfReviews(TreeMap<Integer, Integer> wholeVerifiedPostingsList, int reviewNumberSoFar) {
+        return  wholeVerifiedPostingsList.subMap(0, reviewNumberSoFar+1);
     }
 
     private TreeMap<Integer, Integer> getWholePostingsList(String word, int wordNumber) {

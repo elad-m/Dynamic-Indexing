@@ -77,14 +77,14 @@ public class PrintingTool {
 
     public static void printMap(Map<?,?> map){
         for(Map.Entry<?,?> entry: map.entrySet()){
-            System.out.print(entry.getKey() + WHITE_SPACE + entry.getValue());
+            System.out.print(entry.getKey() + WHITE_SPACE + entry.getValue() + WHITE_SPACE);
         }
         System.out.println();
     }
 
     public static void printMap(PrintWriter tlog, Map<?,?> map){
         for(Map.Entry<?,?> entry: map.entrySet()){
-            tlog.print(entry.getKey() + WHITE_SPACE + entry.getValue());
+            tlog.print(entry.getKey() + WHITE_SPACE + entry.getValue() + WHITE_SPACE);
         }
         tlog.println();
     }
