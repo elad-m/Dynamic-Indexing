@@ -58,9 +58,9 @@ public class SimpleMergeIndexWriter implements IndexWriter{
         return reviewCounter;
     }
 
+
     private void constructIndexWithExternalSort(String inputFile) {
         this.currentIndexDirectory = allIndexesDirectory;
-        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
         instantiateWriters();
         sortAndConstructIndex(inputFile, reviewCounter);
     }
@@ -68,13 +68,13 @@ public class SimpleMergeIndexWriter implements IndexWriter{
 
     public int insert(String inputFile, String auxIndexDirectory) {
         this.currentIndexDirectory = createDirectory(auxIndexDirectory);
-        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
         instantiateWriters();
         sortAndConstructIndex(inputFile, reviewCounter);
         return reviewCounter;
     }
 
     private void instantiateWriters() {
+        this.reviewsMetaDataIndexWriter = new ReviewsMetaDataIndexWriter(allIndexesDirectory.getAbsolutePath());
         wordsDataIndexWriter = new WordsExternalIndexWriter(currentIndexDirectory);
     }
 

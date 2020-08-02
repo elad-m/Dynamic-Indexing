@@ -56,8 +56,7 @@ abstract public class Experiment {
         tlog.println("===== After Build/Merge... =====");
         testWordQueriesOnAverage(indexReader,
                 indexWriter,
-                scalingCases.getWordQueries()
-        );
+                scalingCases.getWordQueries());
 //                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
         int currentNumberOfReviews = testMetaData(indexReader);
 //        testReviewMetaData(indexReader, currentNumberOfReviews);
@@ -69,17 +68,17 @@ abstract public class Experiment {
         int numberOfInsertions = scalingCases.getNumberOfInsertionFiles();
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < numberOfInsertions; i++) {
-            tlog.println("=====  Index insertion number " + i + "=====");
+//            tlog.println("=====  Index insertion number " + i + "=====");
             insertToIndex(indexWriter, i);
-            indexReader = deleteReviews(indexWriter);
-//            indexReader = recreateIndexReader(indexWriter);
+//            indexReader = deleteReviews(indexWriter);
+            indexReader = recreateIndexReader(indexWriter);
             testWordQueriesOnAverage(indexReader,
                     indexWriter,
                     wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY)
             );
 //            scalingCases.getWordQueries());
-
         }
+        resultsWriter.addToElapsedConstructionTimeList(startTime);
         PrintingTool.printElapsedTimeToLog(tlog, startTime, ENTIRE_INSERTIONS_MESSAGE);
         return recreateIndexReader(indexWriter);
     }
@@ -88,7 +87,8 @@ abstract public class Experiment {
         long startTime = System.currentTimeMillis();
         int currentNumberOfReviews = indexWriter.insert(scalingCases.getInsertFileName(insertionNumber),
                 getAuxiliaryIndexDirPattern(insertionNumber));
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, SINGLE_INSERTION_MESSAGE + insertionNumber);
+        resultsWriter.addToElapsedConstructionTimeList(startTime);
+//        PrintingTool.printElapsedTimeToLog(tlog, startTime, SINGLE_INSERTION_MESSAGE + insertionNumber);
         return currentNumberOfReviews;
     }
 
@@ -150,15 +150,15 @@ abstract public class Experiment {
                         resultedPostingsList,
                         indexWriter.getNumberOfReviewsIndexed());
             }
-            if(print && !resultedPostingsList.isEmpty()){ // print one non empty result
-                printResultsOfQuery(word, resultedPostingsList, indexReader, indexWriter);
-                print = false;
-            }
+//            if(print && !resultedPostingsList.isEmpty()){ // print one non empty result
+//                printResultsOfQuery(word, resultedPostingsList, indexReader, indexWriter);
+//                print = false;
+//            }
         }
-        resultsWriter.addToElapsedList(startTime, wordTestCases.size());
-        String message = "querying " + wordTestCases.size() + " random words";
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, message);
-        tlog.println();
+        resultsWriter.addToElapsedQueryTimeList(startTime, wordTestCases.size());
+//        String message = "querying " + wordTestCases.size() + " random words";
+//        PrintingTool.printElapsedTimeToLog(tlog, startTime, message);
+//        tlog.println();
     }
 
     protected void printResultsOfQuery(String word, Map<Integer, Integer> res, IndexReader indexReader, IndexWriter indexWriter) {

@@ -1,4 +1,4 @@
-package dynamic_index;
+package dynamic_index.index_experiments;
 
 import dynamic_index.global_tools.IndexInvalidationTool;
 import dynamic_index.global_tools.ParsingTool;
@@ -156,15 +156,4 @@ public class ResultsVerifier {
         }
     }
 
-
-    class RidFreq {
-
-        private int rid;
-        private int freq;
-
-        public RidFreq(int rid, int freq) {
-            this.rid = rid;
-            this.freq = freq;
-        }
-    }
 }

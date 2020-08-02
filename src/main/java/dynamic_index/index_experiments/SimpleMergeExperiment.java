@@ -35,12 +35,14 @@ public class SimpleMergeExperiment extends Experiment {
         indexReader = doInsertions(simpleMergeIndexWriter);
 
         // testing average query time before merge (i.e. having 240 auxiliary indexes + main index)
+        tlog.println("testing average query time before merge: ");
         testWordQueriesOnAverage(indexReader,
                 simpleMergeIndexWriter,
                 wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY)
         );
 
         // merging and testing average time again
+        tlog.println("testing average query time after merge: ");
         indexReader = mergeIndex(allIndexesDirectory, (SimpleMergeIndexWriter)simpleMergeIndexWriter, indexReader);
         testWordQueriesOnAverage(indexReader,
                 simpleMergeIndexWriter,
@@ -65,6 +67,7 @@ public class SimpleMergeExperiment extends Experiment {
         long startTime = System.currentTimeMillis();
         SimpleMergeIndexWriter simpleMergeIndexWriter = new SimpleMergeIndexWriter(allIndexesDirectory, inputScale);
         simpleMergeIndexWriter.construct(scalingCases.getInputFilename());
+        resultsWriter.addToElapsedConstructionTimeList(startTime);
         PrintingTool.printElapsedTimeToLog(tlog, startTime, SIMPLE_FIRST_BUILD);
         return simpleMergeIndexWriter;
     }

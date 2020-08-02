@@ -64,6 +64,7 @@ public class LogMergeExperiment extends Experiment{
         LogMergeIndexWriter logMergeIndexWriter = new LogMergeIndexWriter(allIndexesDirectory,
                 TEMP_INDEX_SIZE, inputScale);
         logMergeIndexWriter.construct(scalingCases.getInputFilename());
+        resultsWriter.addToElapsedConstructionTimeList(startTime);
         PrintingTool.printElapsedTimeToLog(tlog, startTime, LOG_FIRST_BUILD);
         return logMergeIndexWriter;
     }

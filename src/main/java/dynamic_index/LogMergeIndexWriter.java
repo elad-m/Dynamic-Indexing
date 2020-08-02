@@ -92,9 +92,6 @@ public class LogMergeIndexWriter implements IndexWriter{
                 break;
             case REVIEW_TEXT_FIELD:
                 reviewConcatFields.append(WHITE_SPACE_SEPARATOR).append(feedTextToIndexWriter(value));
-                if (reviewCounter % 100000 == 0) {
-                    System.out.println(reviewCounter);
-                }
                 reviewsMetaDataIndexWriter.writeData(reviewConcatFields.toString());
                 reviewConcatFields.replace(0, reviewConcatFields.length(), "");
                 incrementReviewCounter();
@@ -148,9 +145,6 @@ public class LogMergeIndexWriter implements IndexWriter{
         } else {
             ridToFrequencies = invertedIndex.getRidToFrequencyMap();
             IndexInvalidationTool.filterResults(allIndexesDirectory.getAbsolutePath(), ridToFrequencies);
-            if(invertedIndex.getRidToFrequencyMap().isEmpty()){
-                System.err.println(" DEBUG shou;aldjf;lajdf");
-            }
         }
         return ridToFrequencies;
     }

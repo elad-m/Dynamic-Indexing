@@ -8,16 +8,26 @@ import java.util.List;
 
 public class ResultsWriter {
 
-    public final List<Double> currentElapsedList = new ArrayList<>();
+    private final List<Double> elapsedQueryTimeList = new ArrayList<>();
+    private final List<Integer> elapsedConstructionTimeList = new ArrayList<>();
 
-    public void addToElapsedList(long startTime, int averageFactor){
+    public void addToElapsedQueryTimeList(long startTime, int averageFactor){
         long endTime = System.currentTimeMillis();
         double elapsedTimeMilliSeconds = (endTime - startTime)/(double)averageFactor;
-        currentElapsedList.add(elapsedTimeMilliSeconds);
+        elapsedQueryTimeList.add(elapsedTimeMilliSeconds);
+    }
+
+    public void addToElapsedConstructionTimeList(long startTime){
+        long endTime = System.currentTimeMillis();
+        int elapsedTimeMilliSeconds = (int)(endTime - startTime);
+        elapsedConstructionTimeList.add(elapsedTimeMilliSeconds);
     }
 
     public void printResults(String message, PrintWriter tlog){
         tlog.println(message);
-        PrintingTool.printList(tlog, currentElapsedList);
+        tlog.print("Average Query: ");
+        PrintingTool.printList(tlog, elapsedQueryTimeList);
+        tlog.print("Construction time: ");
+        PrintingTool.printList(tlog, elapsedConstructionTimeList);
     }
 }

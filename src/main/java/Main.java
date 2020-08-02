@@ -20,15 +20,16 @@ public class Main {
 
         System.out.println("======================================= Starting Experiment =======================================");
 
+
         SimpleMergeExperiment simpleMergeExperiment =
                 new SimpleMergeExperiment(localDir, 5, false);
         simpleMergeExperiment.runExperiment();
 
         testTempSize(localDir,5,false);
 //        LogMergeExperiment logMergeExperiment =
-//                new LogMergeExperiment(localDir, 5, 32768, false);
+//                new LogMergeExperiment(localDir, 5, 33554432, false);
 //        logMergeExperiment.runExperiment();
-//
+
 
     }
 
@@ -93,8 +94,7 @@ public class Main {
 
     private static void testTempSize(String localDir, int inputScale, boolean shouldVerify) {
         //testing temporary index size
-        int[] tempIndexSizes = {1024, 1024, 8192, 32768, 131072, 1048576, 4194304, 4 * 4194304};
-//        int[] tempIndexSizes = {1048576};
+        int[] tempIndexSizes = {1024, 8192, 65536, 524288, 4194304, 33554432};
         LogMergeExperiment logMergeExperiment;
         for (int tempSize : tempIndexSizes) {
             logMergeExperiment = new LogMergeExperiment(localDir, inputScale, tempSize, shouldVerify);

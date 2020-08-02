@@ -1,4 +1,4 @@
-package dynamic_index;
+package dynamic_index.index_experiments;
 
 import dynamic_index.global_tools.MiscTools;
 import dynamic_index.global_tools.ParsingTool;
@@ -10,18 +10,11 @@ import java.util.*;
 public class ScalingCases {
 
     final String[] we4 = {"zzzzzzzzzzzzzzzzz", "0", "zzzzzzzzzzzzzz", "a", "to", "in"};
-//    final String[] we4 = {"everyone", "studies", "weekends", "musical", "care"};
-//    ,
-//            "africanism", "grotta", "acheerleader",
-//            "slinkyness", "amazoni", "epesode", "zaius"};
-    final String[] inse4 = {"africanism", "grotta", "acheerleader", "slinkyness", "amazoni", "epesode", "zaius"};
-    final String[] delWordse4 = {"africanism", "slinkyness", "zaius"};
+
     final int[] delReviews4 = new int[]{6556, 10776, 11782, 12238, 1, 10, 500, 10000, 12999, 13000, 10090, 11420};
     final int[] metaReview4 = new int[]{-1, 0, 15000, 1, 6556, 10000, 13000};
 
     final String[] we5 = {"0", "zzzzzzzzzzzzzz", "kohut", "1", "a", "the"};
-    final String[] inse5 = {};
-    final String[] delWords5 = {};
     final int[] delReviews5 = new int[]{};
     final int[] metaReview5 = {100001, 0, -2, 1, 100000, 50000};
 
@@ -38,20 +31,13 @@ public class ScalingCases {
     final String INSERTION_DIR_E4 = "E4TestResources";
     final String INSERTION_DIR_E5 = "E5TestResources";
 
-    static final String MOVIE_REVIEWS_1 = "moviesE1.txt";
-    static final String MOVIE_REVIEWS_2 = "moviesE2.txt";
-    static final String MOVIE_REVIEWS_3 = "moviesE3.txt";
+
 //    static final String MOVIE_REVIEWS_4 = "moviesE4.txt";
 //    static final String MOVIE_REVIEWS_5 = "moviesE5.txt";
     static final String MOVIE_REVIEWS_6 =  "moviesE6.txt";
-    static final String LOG_MOVIE_REVIEWS_1 = "logMoviesE1.txt";
-    static final String LOG_MOVIE_REVIEWS_4 = "logMoviesE4.txt";
-    static final String LOG_MOVIE_REVIEWS_5 = "logMoviesE5.txt";
     static final String LOG_MOVIE_REVIEWS_6 = MOVIE_REVIEWS_6;
 
     private String[] wordQueries = we4;
-    //    private String[] insertQueries = inse1;
-//    private String[] delQueries = delWordse1;
     private int[] delReviews = delReviews4;
     private int[] metaRev = metaReview4;
 
@@ -181,9 +167,6 @@ public class ScalingCases {
         return insertFiles.length;
     }
 
-    public int[] getDelReviews() {
-        return delReviews;
-    }
 }
 
 
