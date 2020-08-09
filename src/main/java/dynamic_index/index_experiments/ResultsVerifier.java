@@ -37,11 +37,11 @@ public class ResultsVerifier {
             case 4:
                 fileToVerifyWith = new File(indexParentDir + File.separator + e4VerifyingFile);
                 break;
-            case 5:
+            case 5: case 6:
                 fileToVerifyWith = null;
                 break;
             default:
-                System.err.println("I don't care");
+                System.err.println("Input scale not between 4-6");
                 fileToVerifyWith = null;
                 break;
         }

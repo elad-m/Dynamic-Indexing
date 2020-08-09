@@ -4,10 +4,13 @@ import dynamic_index.*;
 import dynamic_index.global_tools.PrintingTool;
 
 import java.io.*;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static dynamic_index.global_tools.MiscTools.ENTIRE_INSERTIONS_MESSAGE;
 import static dynamic_index.global_tools.MiscTools.SINGLE_INSERTION_MESSAGE;
@@ -42,7 +45,7 @@ abstract public class Experiment {
         this.indexParentDirectory = localDir;
         this.allIndexesDirectory = indexDirectoryName;
         this.inputScale = inputScale;
-        this.scalingCases = new ScalingCases(this.inputScale, logMergeType);
+        this.scalingCases = new ScalingCases(this.inputScale);
         this.resultsWriter = new ResultsWriter();
         this.wordsRandomizer = new WordsRandomizer(allIndexesDirectory, inputScale);
         this.resultsVerifier = new ResultsVerifier(localDir, allIndexesDirectory, inputScale);
@@ -56,40 +59,33 @@ abstract public class Experiment {
         tlog.println("===== After Build/Merge... =====");
         testWordQueriesOnAverage(indexReader,
                 indexWriter,
-                scalingCases.getWordQueries());
-//                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
+                wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
         int currentNumberOfReviews = testMetaData(indexReader);
-//        testReviewMetaData(indexReader, currentNumberOfReviews);
     }
 
     protected IndexReader doInsertions(IndexWriter indexWriter) {
         IndexReader indexReader;
-        int currentNumberOfReviews;
         int numberOfInsertions = scalingCases.getNumberOfInsertionFiles();
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < numberOfInsertions; i++) {
-//            tlog.println("=====  Index insertion number " + i + "=====");
+            System.out.println("=====  Index insertion number " + i + "=====");
             insertToIndex(indexWriter, i);
-//            indexReader = deleteReviews(indexWriter);
-            indexReader = recreateIndexReader(indexWriter);
+            indexReader = deleteReviews(indexWriter);
             testWordQueriesOnAverage(indexReader,
                     indexWriter,
                     wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY)
             );
-//            scalingCases.getWordQueries());
         }
         resultsWriter.addToElapsedConstructionTimeList(startTime);
         PrintingTool.printElapsedTimeToLog(tlog, startTime, ENTIRE_INSERTIONS_MESSAGE);
         return recreateIndexReader(indexWriter);
     }
 
-    protected int insertToIndex(IndexWriter indexWriter, int insertionNumber) {
+    protected void insertToIndex(IndexWriter indexWriter, int insertionNumber) {
         long startTime = System.currentTimeMillis();
         int currentNumberOfReviews = indexWriter.insert(scalingCases.getInsertFileName(insertionNumber),
                 getAuxiliaryIndexDirPattern(insertionNumber));
         resultsWriter.addToElapsedConstructionTimeList(startTime);
-//        PrintingTool.printElapsedTimeToLog(tlog, startTime, SINGLE_INSERTION_MESSAGE + insertionNumber);
-        return currentNumberOfReviews;
     }
 
 
@@ -141,7 +137,6 @@ abstract public class Experiment {
         long startTime = System.currentTimeMillis();
         System.out.print("words queried: ");
         PrintingTool.printList(wordTestCases);
-        boolean print = true;
         for (String word : wordTestCases) {
             Map<Integer, Integer> resultedPostingsList = indexReader.getReviewsWithToken(word, indexWriter);
             if (this.shouldVerify) {
@@ -150,15 +145,10 @@ abstract public class Experiment {
                         resultedPostingsList,
                         indexWriter.getNumberOfReviewsIndexed());
             }
-//            if(print && !resultedPostingsList.isEmpty()){ // print one non empty result
-//                printResultsOfQuery(word, resultedPostingsList, indexReader, indexWriter);
-//                print = false;
-//            }
         }
         resultsWriter.addToElapsedQueryTimeList(startTime, wordTestCases.size());
-//        String message = "querying " + wordTestCases.size() + " random words";
-//        PrintingTool.printElapsedTimeToLog(tlog, startTime, message);
-//        tlog.println();
+        resultsWriter.addToIndexDiskSize(getAllIndexSize());
+        resultsWriter.addToNumberOfIndexes(getNumberOfIndexes());
     }
 
     protected void printResultsOfQuery(String word, Map<Integer, Integer> res, IndexReader indexReader, IndexWriter indexWriter) {
@@ -198,7 +188,7 @@ abstract public class Experiment {
     protected void createTestLog(String experimentType) {
         try {
             File indexDirectoryFile = new File(this.allIndexesDirectory);
-            File testLogFile = new File(indexDirectoryFile.getParent() + File.separator + "0TESTLOG.txt");
+            File testLogFile = new File(indexDirectoryFile.getParent() + File.separator + "LOG.txt");
             tlog = new PrintWriter(new BufferedWriter(new FileWriter(testLogFile, true)), true);
         } catch (IOException e) {
             e.printStackTrace();
@@ -214,6 +204,57 @@ abstract public class Experiment {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
         tlog.println(dtf.format(now));
+    }
+
+    protected long getAllIndexSize() {
+        File allIndexesDirectory = new File(this.allIndexesDirectory);
+        Path path = allIndexesDirectory.toPath();
+        final AtomicLong size = new AtomicLong(0);
+
+        try {
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    size.addAndGet(attrs.size());
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) {
+
+                    System.out.println("skipped: " + file + " (" + exc + ")");
+                    // Skip folders that can't be traversed
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+
+                    if (exc != null)
+                        System.out.println("had trouble traversing: " + dir + " (" + exc + ")");
+                    // Ignore errors traversing a folder
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            throw new AssertionError("walkFileTree will not throw IOException if the FileVisitor does not");
+        }
+
+        return size.get();
+    }
+
+    protected int getNumberOfIndexes(){
+        long numberOfIndexes = -1;
+        try {
+            numberOfIndexes = Files.find(
+                    Paths.get(allIndexesDirectory),
+                    1,  // how deep do we want to descend
+                    (path, attributes) -> attributes.isDirectory()
+            ).count() - 1;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return (int)numberOfIndexes;
     }
 
 }

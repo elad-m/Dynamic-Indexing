@@ -207,7 +207,7 @@ public class LogMergeIndexWriter implements IndexWriter{
                 renameMergedDirectory(mergedDirectory, numberOfFirstIndexDirectoriesToMerge);
                 (new IndexRemover()).removeFiles(onlyFilesToMerge);
             } else {
-                // todo
+                System.err.println("Serious problem, should not get less than 1 here.");
                 assert true;
             }
         }
@@ -240,7 +240,7 @@ public class LogMergeIndexWriter implements IndexWriter{
         }
 
         private void putTempIndexInMap(TreeMap<Integer, File> sizeToFile) {
-            File tempIndexDirectory = createDirectory(allIndexesDirectory + File.separator + "Z0");
+            File tempIndexDirectory = createDirectory(allIndexesDirectory + File.separator + "tempIndex");
             WordsSimpleIndexWriter wordsSimpleIndexWriter = new WordsSimpleIndexWriter(tempIndexDirectory);
             wordsSimpleIndexWriter.write(wordToInvertedIndexMap);
             sizeToFile.put(0, tempIndexDirectory);

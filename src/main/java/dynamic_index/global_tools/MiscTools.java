@@ -36,8 +36,6 @@ public class MiscTools {
     public static final String BINARY_FILE_SUFFIX = ".bin";
 
     public static final String TERM_MAP_FILE_DEBUG = "wordsTermToTermID.txt";
-    public static final String EXTERNAL_E4_MAP_OF_WORDS = "e4.txt";
-    public static final String EXTERNAL_E5_MAP_OF_WORDS = "e5.txt";
     public static final String DIR_NAME_FOR_RANDOM_WORDS = "words";
 
     public static final String MERGED_INDEX_DIRECTORY = "mergedIndex";
@@ -49,6 +47,7 @@ public class MiscTools {
 
     public static final String ENTIRE_INSERTIONS_MESSAGE = "\nEntire index insertions ";
     public static final String SINGLE_INSERTION_MESSAGE = "Index insertion number ";
+    public static final String INSERTION_FILES_DIRECTORY = "insertionFiles";
 
 
     //====================================  Sizes  =====================================//

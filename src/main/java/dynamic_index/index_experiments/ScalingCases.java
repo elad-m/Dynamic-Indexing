@@ -25,17 +25,13 @@ public class ScalingCases {
     final int[] metaReview6 = {1000001, 0, -2, 1, 1000000, 500000};
 
 
-    final String INSERTION_DIR_E1 = "E1TestResources";
     static final String MOVIE_REVIEWS_4 = "constructE4.txt";
     static final String MOVIE_REVIEWS_5 = "constructE5.txt";
+    static final String MOVIE_REVIEWS_6 = "constructE6.txt";
     final String INSERTION_DIR_E4 = "E4TestResources";
     final String INSERTION_DIR_E5 = "E5TestResources";
+    final String INSERTION_DIR_E6 = "E6TestResources";
 
-
-//    static final String MOVIE_REVIEWS_4 = "moviesE4.txt";
-//    static final String MOVIE_REVIEWS_5 = "moviesE5.txt";
-    static final String MOVIE_REVIEWS_6 =  "moviesE6.txt";
-    static final String LOG_MOVIE_REVIEWS_6 = MOVIE_REVIEWS_6;
 
     private String[] wordQueries = we4;
     private int[] delReviews = delReviews4;
@@ -48,15 +44,12 @@ public class ScalingCases {
 
     private final HashSet<Integer> alreadyDeletedRids = new HashSet<>();
 
-    public ScalingCases(int eType, boolean logMergType) {
+    public ScalingCases(int eType) {
         this.testType = eType;
         switch (eType) {
             case 4:
                 wordQueries = we4;
-//                if (logMergType)
-//                    inputFilename = LOG_MOVIE_REVIEWS_4;
-//                else
-                    inputFilename = MOVIE_REVIEWS_4;
+                inputFilename = MOVIE_REVIEWS_4;
                 delReviews = delReviews4;
                 metaRev = metaReview4;
                 insertDirectory = new File(INSERTION_DIR_E4);
@@ -64,10 +57,7 @@ public class ScalingCases {
                 break;
             case 5:
                 wordQueries = we5;
-//                if (logMergType)
-//                    inputFilename = LOG_MOVIE_REVIEWS_5;
-//                else
-                    inputFilename = MOVIE_REVIEWS_5;
+                inputFilename = MOVIE_REVIEWS_5;
                 delReviews = delReviews5;
                 metaRev = metaReview5;
                 insertDirectory = new File(INSERTION_DIR_E5);
@@ -75,16 +65,12 @@ public class ScalingCases {
                 break;
             case 6:
                 wordQueries = we6;
-//                if (logMergType)
-//                    inputFilename = LOG_MOVIE_REVIEWS_6;
-//                else
-                    inputFilename = MOVIE_REVIEWS_6;
+                inputFilename = MOVIE_REVIEWS_6;
                 delReviews = delReviews6;
                 metaRev = metaReview6;
-                insertDirectory = new File(INSERTION_DIR_E5);
+                insertDirectory = new File(INSERTION_DIR_E6);
                 insertFiles = getInsertFileNames();
                 break;
-
             default:
                 inputFilename = "";
                 insertFiles = new File[0];
@@ -116,7 +102,6 @@ public class ScalingCases {
             }
         }
         return randomRids;
-
     }
 
     private File[] getInsertFileNames() {
