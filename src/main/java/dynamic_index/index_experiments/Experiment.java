@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static dynamic_index.global_tools.MiscTools.ENTIRE_INSERTIONS_MESSAGE;
-import static dynamic_index.global_tools.MiscTools.SINGLE_INSERTION_MESSAGE;
 
 /**
  * Index merging experiment. Consists of index building, inserting deleting.
@@ -40,7 +39,6 @@ abstract public class Experiment {
     public Experiment(String localDir,
                       String indexDirectoryName,
                       int inputScale,
-                      boolean logMergeType,
                       boolean shouldVerify) {
         this.indexParentDirectory = localDir;
         this.allIndexesDirectory = indexDirectoryName;
@@ -53,14 +51,12 @@ abstract public class Experiment {
     }
     public abstract void runExperiment();
 
-    public abstract void initiateExperiment();
-
     protected void queryAfterBuildIndex(IndexReader indexReader, IndexWriter indexWriter) {
         tlog.println("===== After Build/Merge... =====");
         testWordQueriesOnAverage(indexReader,
                 indexWriter,
                 wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
-        int currentNumberOfReviews = testMetaData(indexReader);
+        testMetaData(indexReader);
     }
 
     protected IndexReader doInsertions(IndexWriter indexWriter) {
@@ -83,7 +79,7 @@ abstract public class Experiment {
 
     protected void insertToIndex(IndexWriter indexWriter, int insertionNumber) {
         long startTime = System.currentTimeMillis();
-        int currentNumberOfReviews = indexWriter.insert(scalingCases.getInsertFileName(insertionNumber),
+        indexWriter.insert(scalingCases.getInsertFileName(insertionNumber),
                 getAuxiliaryIndexDirPattern(insertionNumber));
         resultsWriter.addToElapsedConstructionTimeList(startTime);
     }

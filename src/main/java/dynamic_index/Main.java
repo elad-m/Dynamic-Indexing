@@ -1,3 +1,5 @@
+package dynamic_index;
+
 import dynamic_index.global_tools.MiscTools;
 import dynamic_index.index_experiments.LogMergeExperiment;
 import dynamic_index.index_experiments.SimpleMergeExperiment;

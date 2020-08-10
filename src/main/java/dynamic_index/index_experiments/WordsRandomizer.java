@@ -37,10 +37,7 @@ public class WordsRandomizer {
     }
 
     public int getWordNumber(String word){
-        if(swapped.containsKey(word))
-            return swapped.get(word);
-        else
-            return -1;
+        return swapped.getOrDefault(word, -1);
     }
 
     public List<String> getAllWords() {

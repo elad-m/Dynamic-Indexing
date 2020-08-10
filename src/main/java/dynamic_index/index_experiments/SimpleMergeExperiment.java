@@ -18,7 +18,6 @@ public class SimpleMergeExperiment extends Experiment {
         super(localDir,
                 localDir + File.separatorChar + MiscTools.INDEXES_DIR_NAME,
                 inputScale,
-                false,
                 shouldVerify);
     }
 
@@ -58,14 +57,14 @@ public class SimpleMergeExperiment extends Experiment {
         tlog.close();
     }
 
-    public void initiateExperiment() {
+    private void initiateExperiment() {
         printDateAndTime();
         createTestLog("Simple Merge ");
     }
 
     private IndexWriter buildIndex() {
         long startTime = System.currentTimeMillis();
-        SimpleMergeIndexWriter simpleMergeIndexWriter = new SimpleMergeIndexWriter(allIndexesDirectory, inputScale);
+        SimpleMergeIndexWriter simpleMergeIndexWriter = new SimpleMergeIndexWriter(allIndexesDirectory);
         simpleMergeIndexWriter.construct(scalingCases.getInputFilename());
         resultsWriter.addToElapsedConstructionTimeList(startTime);
         PrintingTool.printElapsedTimeToLog(tlog, startTime, SIMPLE_FIRST_BUILD);

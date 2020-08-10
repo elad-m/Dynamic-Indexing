@@ -7,13 +7,6 @@ import dynamic_index.global_tools.PrintingTool;
 import dynamic_index.global_tools.MiscTools;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static dynamic_index.global_tools.MiscTools.*;
 
@@ -26,7 +19,6 @@ public class LogMergeExperiment extends Experiment{
         super(localDir,
                 localDir + File.separatorChar + MiscTools.LOG_MERGE_INDEXES_DIR_NAME,
                 inputScale,
-                true,
                 shouldVerify);
         TEMP_INDEX_SIZE = tempIndexSize;
     }
@@ -52,7 +44,7 @@ public class LogMergeExperiment extends Experiment{
         tlog.close();
     }
 
-    public void initiateExperiment(){
+    private void initiateExperiment(){
         printDateAndTime();
         createTestLog("Log Merge ");
     }
@@ -62,7 +54,7 @@ public class LogMergeExperiment extends Experiment{
 
         long startTime = System.currentTimeMillis();
         LogMergeIndexWriter logMergeIndexWriter = new LogMergeIndexWriter(allIndexesDirectory,
-                TEMP_INDEX_SIZE, inputScale);
+                TEMP_INDEX_SIZE);
         logMergeIndexWriter.construct(scalingCases.getInputFilename());
         resultsWriter.addToElapsedConstructionTimeList(startTime);
         PrintingTool.printElapsedTimeToLog(tlog, startTime, LOG_FIRST_BUILD);

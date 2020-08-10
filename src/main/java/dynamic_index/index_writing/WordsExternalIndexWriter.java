@@ -146,7 +146,7 @@ public class WordsExternalIndexWriter {
         if (wordToInvertedIndex.containsKey(word)) { // word already in.. can this happen? how to prevent it
             wordToInvertedIndex.get(word).putAll(ridToFrequencyHistogram);
         } else { // new word
-            InvertedIndex invertedIndexOfWord = new InvertedIndex(word, ridToFrequencyHistogram, indexDirectory, indexDirectory);
+            InvertedIndex invertedIndexOfWord = new InvertedIndex(word, ridToFrequencyHistogram, indexDirectory);
             wordToInvertedIndex.put(word, invertedIndexOfWord);
         }
         ridsOfATid.clear();

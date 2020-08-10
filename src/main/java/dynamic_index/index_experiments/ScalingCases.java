@@ -101,6 +101,7 @@ public class ScalingCases {
                 randomRids.add((ridCandidate));
             }
         }
+        alreadyDeletedRids.addAll(randomRids);
         return randomRids;
     }
 

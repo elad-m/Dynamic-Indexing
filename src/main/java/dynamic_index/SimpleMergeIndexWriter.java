@@ -39,16 +39,13 @@ public class SimpleMergeIndexWriter implements IndexWriter{
 
     private int reviewCounter = 1; // not necessarily the number of reviews in index in practice because deletion
     private int tokenCounter = 0; // token counter only incremented in the mapping stage
-    private final int inputScaleType;
 
     /**
      * Creates the simple-merge writer of the index.
      * @param allIndexesDirectory - directory to create for all indexes: main and auxiliary
-     * @param inputScaleType - size of input in reviews in exponent of 10
      */
-    public SimpleMergeIndexWriter(String allIndexesDirectory, int inputScaleType) {
+    public SimpleMergeIndexWriter(String allIndexesDirectory) {
         this.allIndexesDirectory = createDirectory(allIndexesDirectory);
-        this.inputScaleType = inputScaleType;
         IndexInvalidationTool.setInvalidationDirty(false);
     }
 

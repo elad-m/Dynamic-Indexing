@@ -29,7 +29,6 @@ public class LogMergeIndexWriter implements IndexWriter{
 
     private final File allIndexesDirectory;
     private final TemporaryIndex temporaryIndex;
-    private final int inputScale;
     private final HashSet<String> terms = new HashSet<>();
 
     private ReviewsMetaDataIndexWriter reviewsMetaDataIndexWriter;
@@ -40,10 +39,9 @@ public class LogMergeIndexWriter implements IndexWriter{
      * @param allIndexesDirectory - where all index directories will be.
      * @param tempIndexSize - size of temporary in-memory index.
      */
-    public LogMergeIndexWriter(String allIndexesDirectory, int tempIndexSize, int inputScale) {
+    public LogMergeIndexWriter(String allIndexesDirectory, int tempIndexSize) {
         this.allIndexesDirectory = createDirectory(allIndexesDirectory);
         this.temporaryIndex = new TemporaryIndex(tempIndexSize);
-        this.inputScale = inputScale;
         IndexInvalidationTool.setInvalidationDirty(false);
     }
 

@@ -1,10 +1,7 @@
 package dynamic_index.index_structure;
 
 
-import dynamic_index.global_tools.MiscTools;
-
 import java.io.*;
-import java.nio.file.Files;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -51,12 +48,10 @@ public class InvertedIndex implements WritingMeasurable, Comparable<InvertedInde
      * Create inverted index with some bulk of data of a word.
      * @param word - the word this inverted index belongs to.
      * @param ridToFrequency - review IDs and the frequency that the word appears in
-     * @param mainIndexDirectory - where to keep temporary files if necessary, parent of the next parameter
      * @param currentIndexDirectory - where the index directory source of this inverted index is.
      */
     public InvertedIndex(String word,
                          Map<Integer, Integer> ridToFrequency,
-                         File mainIndexDirectory,
                          File currentIndexDirectory) {
         this.word = word;
         this.indexName = currentIndexDirectory.getName();
@@ -194,6 +189,7 @@ public class InvertedIndex implements WritingMeasurable, Comparable<InvertedInde
     /**
      * @return - in-memory data structure of this class.
      */
+    @SuppressWarnings("unchecked")
     public TreeMap<Integer, Integer> getRidToFrequencyMap() {
         return (TreeMap<Integer, Integer>) ridToFrequencyMap.clone();
     }

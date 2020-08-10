@@ -19,8 +19,6 @@ import java.util.TreeMap;
  */
 public class ResultsVerifier {
 
-    private final String e4VerifyingFile = "indexE4Verifier.txt";
-
     private final File fileToVerifyWith;
     private final String allIndexesDirectory;
 
@@ -33,6 +31,7 @@ public class ResultsVerifier {
      */
     public ResultsVerifier(String indexParentDir, String allIndexesDirectory, int inputScale) {
         this.allIndexesDirectory = allIndexesDirectory;
+        String e4VerifyingFile = "indexE4Verifier.txt";
         switch (inputScale) {
             case 4:
                 fileToVerifyWith = new File(indexParentDir + File.separator + e4VerifyingFile);
@@ -78,16 +77,16 @@ public class ResultsVerifier {
         }
     }
 
-    private boolean areBadResults(String word, SortedMap<Integer, Integer> trueResult, int actualRid, int actualeFreq) {
+    private boolean areBadResults(String word, SortedMap<Integer, Integer> trueResult, int actualRid, int actualFreq) {
         boolean isBad;
         if(!trueResult.containsKey(actualRid)){
             System.err.format(word + ": " + "actual rid-%d not found in true file.\n", actualRid);
             isBad = true;
         } else {
             int trueFreq = trueResult.get(actualRid);
-            if(trueFreq != actualeFreq){
+            if(trueFreq != actualFreq){
                 System.err.format(word + ": " + "actual freq-%d is different than the true freq-%d.\n",
-                        actualeFreq,
+                        actualFreq,
                         trueFreq);
                 isBad = true;
             } else {

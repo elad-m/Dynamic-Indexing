@@ -106,7 +106,7 @@ class SingleIndexReaderQueue{
         if(ridToFrequencyMap.isEmpty()){ // could be empty, because of deletion. The method above filters deleted rids.
             return null;
         } else {
-            return new InvertedIndex(wordToTokenMetaData.getKey(), ridToFrequencyMap, mainIndexDirectory, singleIndexReader.getCurrentIndexDirectory());
+            return new InvertedIndex(wordToTokenMetaData.getKey(), ridToFrequencyMap, singleIndexReader.getCurrentIndexDirectory());
         }
     }
 
