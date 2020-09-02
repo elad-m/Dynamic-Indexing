@@ -15,11 +15,9 @@ public class LogMergeExperiment extends Experiment{
 
 
     private final int TEMP_INDEX_SIZE;
-    public LogMergeExperiment(String localDir, int inputScale, int tempIndexSize, boolean shouldVerify) {
+    public LogMergeExperiment(String localDir, int tempIndexSize) {
         super(localDir,
-                localDir + File.separatorChar + MiscTools.LOG_MERGE_INDEXES_DIR_NAME,
-                inputScale,
-                shouldVerify);
+                localDir + File.separatorChar + MiscTools.LOG_MERGE_INDEXES_DIR_NAME);
         TEMP_INDEX_SIZE = tempIndexSize;
     }
 
@@ -39,7 +37,7 @@ public class LogMergeExperiment extends Experiment{
         removeIndex();
 
         // printing the average query time
-        resultsWriter.printResults("Log merge results", tlog);
+        resultsWriter.printResults("\nLog merge results: \n", tlog);
 
         tlog.close();
     }
@@ -50,7 +48,8 @@ public class LogMergeExperiment extends Experiment{
     }
 
     private IndexWriter buildIndex(){
-        tlog.println("temporary index size: " + TEMP_INDEX_SIZE);
+        tlog.println("Temporary Index Size: " + TEMP_INDEX_SIZE);
+        System.out.println("Temporary Index Size: " + TEMP_INDEX_SIZE);
 
         long startTime = System.currentTimeMillis();
         LogMergeIndexWriter logMergeIndexWriter = new LogMergeIndexWriter(allIndexesDirectory,

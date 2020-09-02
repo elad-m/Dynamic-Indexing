@@ -14,11 +14,9 @@ import static dynamic_index.global_tools.MiscTools.SIMPLE_FIRST_BUILD;
 public class SimpleMergeExperiment extends Experiment {
 
 
-    public SimpleMergeExperiment(String localDir, int inputScale, boolean shouldVerify) {
+    public SimpleMergeExperiment(String localDir) {
         super(localDir,
-                localDir + File.separatorChar + MiscTools.INDEXES_DIR_NAME,
-                inputScale,
-                shouldVerify);
+                localDir + File.separatorChar + MiscTools.INDEXES_DIR_NAME);
     }
 
     @Override
@@ -34,15 +32,15 @@ public class SimpleMergeExperiment extends Experiment {
         indexReader = doInsertions(simpleMergeIndexWriter);
 
         // testing average query time before merge (i.e. having 240 auxiliary indexes + main index)
-        tlog.println("testing average query time before merge: ");
+        tlog.println("testing average query time before merge...");
         testWordQueriesOnAverage(indexReader,
                 simpleMergeIndexWriter,
                 wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY)
         );
 
         // merging and testing average time again
-        tlog.println("testing average query time after merge: ");
         indexReader = mergeIndex(allIndexesDirectory, (SimpleMergeIndexWriter)simpleMergeIndexWriter, indexReader);
+        tlog.println("testing average query time after merge...");
         testWordQueriesOnAverage(indexReader,
                 simpleMergeIndexWriter,
                 wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY)
@@ -52,7 +50,7 @@ public class SimpleMergeExperiment extends Experiment {
         removeIndex();
 
         // printing the average query time
-        resultsWriter.printResults("Simple merge results", tlog);
+        resultsWriter.printResults("\nSimple merge results: \n", tlog);
 
         tlog.close();
     }
@@ -75,7 +73,7 @@ public class SimpleMergeExperiment extends Experiment {
         long startTime = System.currentTimeMillis();
         System.out.println("=====\n" + "Merging All Indexes " + "\n=====");
         simpleMergeIndexWriter.merge(indexReader);
-        PrintingTool.printElapsedTimeToLog(tlog, startTime, "\tIndex Merging");
+        PrintingTool.printElapsedTimeToLog(tlog, startTime, "index Merging");
         return new IndexReader(indexDirectory);
     }
 

@@ -6,81 +6,18 @@ import dynamic_index.global_tools.ParsingTool;
 import java.io.File;
 import java.util.*;
 
-@SuppressWarnings("SpellCheckingInspection")
 public class ScalingCases {
 
-    final String[] we4 = {"zzzzzzzzzzzzzzzzz", "0", "zzzzzzzzzzzzzz", "a", "to", "in"};
-
-    final int[] delReviews4 = new int[]{6556, 10776, 11782, 12238, 1, 10, 500, 10000, 12999, 13000, 10090, 11420};
-    final int[] metaReview4 = new int[]{-1, 0, 15000, 1, 6556, 10000, 13000};
-
-    final String[] we5 = {"0", "zzzzzzzzzzzzzz", "kohut", "1", "a", "the"};
-    final int[] delReviews5 = new int[]{};
-    final int[] metaReview5 = {100001, 0, -2, 1, 100000, 50000};
-
-    final String[] we6 = {"0", "zzzzzzzzzzzzzz", "kohut", "1", "out"};
-    final String[] inse6 = {};
-    final String[] delWords6 = {};
-    final int[] delReviews6 = new int[]{};
-    final int[] metaReview6 = {1000001, 0, -2, 1, 1000000, 500000};
-
-
-    static final String MOVIE_REVIEWS_4 = "constructE4.txt";
-    static final String MOVIE_REVIEWS_5 = "constructE5.txt";
-    static final String MOVIE_REVIEWS_6 = "constructE6.txt";
-    final String INSERTION_DIR_E4 = "E4TestResources";
-    final String INSERTION_DIR_E5 = "E5TestResources";
-    final String INSERTION_DIR_E6 = "E6TestResources";
-
-
-    private String[] wordQueries = we4;
-    private int[] delReviews = delReviews4;
-    private int[] metaRev = metaReview4;
-
-    private final int testType;
-    private final String inputFilename;
-    private File insertDirectory;
+    private final String INSERTION_DIR_NAME = "insertions";
+    private final String FIRST_BUILD_FILE_NAME = "first_build.txt";
+    private final File insertionDirectory;
     private final File[] insertFiles;
 
     private final HashSet<Integer> alreadyDeletedRids = new HashSet<>();
 
-    public ScalingCases(int eType) {
-        this.testType = eType;
-        switch (eType) {
-            case 4:
-                wordQueries = we4;
-                inputFilename = MOVIE_REVIEWS_4;
-                delReviews = delReviews4;
-                metaRev = metaReview4;
-                insertDirectory = new File(INSERTION_DIR_E4);
-                insertFiles = getInsertFileNames();
-                break;
-            case 5:
-                wordQueries = we5;
-                inputFilename = MOVIE_REVIEWS_5;
-                delReviews = delReviews5;
-                metaRev = metaReview5;
-                insertDirectory = new File(INSERTION_DIR_E5);
-                insertFiles = getInsertFileNames();
-                break;
-            case 6:
-                wordQueries = we6;
-                inputFilename = MOVIE_REVIEWS_6;
-                delReviews = delReviews6;
-                metaRev = metaReview6;
-                insertDirectory = new File(INSERTION_DIR_E6);
-                insertFiles = getInsertFileNames();
-                break;
-            default:
-                inputFilename = "";
-                insertFiles = new File[0];
-                System.err.println("check test input again");
-                break;
-        }
-    }
-
-    public int[] getMetaRev() {
-        return metaRev;
+    public ScalingCases() {
+        insertionDirectory = new File(INSERTION_DIR_NAME);
+        insertFiles = getInsertFileNames();
     }
 
     public List<Integer> getRandomRids(int numberOfReviewsToGet, int lower, int upper){
@@ -107,7 +44,7 @@ public class ScalingCases {
 
     private File[] getInsertFileNames() {
         /* next line orders lexicographically which is not what we want */
-        File[] files = insertDirectory.getAbsoluteFile().listFiles(File::isFile);
+        File[] files = insertionDirectory.getAbsoluteFile().listFiles(File::isFile);
         /* order the files numerically */
         Arrays.sort(files, new Comparator<File>() {
             @Override
@@ -133,16 +70,9 @@ public class ScalingCases {
         return files;
     }
 
-    public List<String> getWordQueries() {
-        return Arrays.asList(wordQueries);
-    }
-
-    public int getTestType() {
-        return testType;
-    }
 
     public String getInputFilename() {
-        return inputFilename;
+        return FIRST_BUILD_FILE_NAME;
     }
 
     public String getInsertFileName(int insertNumber) {

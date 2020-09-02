@@ -37,14 +37,14 @@ public class ResultsWriter {
     }
 
     public void printResults(String message, PrintWriter tlog){
-        tlog.println(message);
-        tlog.print("Average Query: ");
+        tlog.print(message);
+        tlog.print("\tAverage Query Time: ");
         PrintingTool.printList(tlog, elapsedQueryTimeList);
-        tlog.print("Construction time: ");
+        tlog.print("\tRun Time: ");
         PrintingTool.printList(tlog, elapsedConstructionTimeList);
-        tlog.print("Total index disk size:");
+        tlog.print("\tTotal Index Size On Disk: ");
         PrintingTool.printList(tlog, totalIndexDiskSize);
-        tlog.print("Number of indexes:");
+        tlog.print("\tNumber of Indexes: ");
         PrintingTool.printList(tlog, numberOfIndexes);
     }
 }

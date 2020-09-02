@@ -15,9 +15,9 @@ public class WordsRandomizer {
     private final Map<Integer, String> wordIdToString;
     private final Map<String, Integer> swapped;
 
-    public WordsRandomizer(String indexDirectoryName, int inputScale){
-        File indexDirectory = new File(indexDirectoryName);
-        this.wordIdToString = loadWordsMapFromFileOutSideIndex(indexDirectory, inputScale);
+    public WordsRandomizer(String allIndexesDirectory){
+        File allIndexesDirectoryFile = new File(allIndexesDirectory);
+        this.wordIdToString = loadWordsMapFromFileOutSideIndex(allIndexesDirectoryFile);
         swapped = wordIdToString.entrySet().stream().collect(
                 Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
     }
@@ -63,10 +63,10 @@ public class WordsRandomizer {
         return loadedMap;
     }
 
-    private Map<Integer, String> loadWordsMapFromFileOutSideIndex(File indexDirectory, int inputScale) {
-        String wordsFileName = "e" + inputScale + ".txt";
-        File externalMapFile = new File(indexDirectory.getParent() + File.separator
-                + MiscTools.DIR_NAME_FOR_RANDOM_WORDS + File.separator + wordsFileName);
+    private Map<Integer, String> loadWordsMapFromFileOutSideIndex(File allIndexesDirectory) {
+        String wordsFileName = "words.txt";
+        File externalMapFile = new File(allIndexesDirectory.getParent() +
+                File.separator + wordsFileName);
         return loadMapFromFile(externalMapFile);
     }
 }

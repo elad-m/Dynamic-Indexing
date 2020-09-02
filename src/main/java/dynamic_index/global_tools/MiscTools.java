@@ -36,17 +36,15 @@ public class MiscTools {
     public static final String BINARY_FILE_SUFFIX = ".bin";
 
     public static final String TERM_MAP_FILE_DEBUG = "wordsTermToTermID.txt";
-    public static final String DIR_NAME_FOR_RANDOM_WORDS = "words";
 
     public static final String MERGED_INDEX_DIRECTORY = "mergedIndex";
     public static final String INDEXES_DIR_NAME = "indexes";
     public static final String LOG_MERGE_INDEXES_DIR_NAME = "logMergeIndexes";
 
-    public static final String LOG_FIRST_BUILD = "\nFirst index build: Log-Merged";
-    public static final String SIMPLE_FIRST_BUILD = "\nFirst index build: Simple-Merged";
+    public static final String LOG_FIRST_BUILD = "first index build: Log-Merged";
+    public static final String SIMPLE_FIRST_BUILD = "first index build: Simple-Merged";
+    public static final String ENTIRE_INSERTIONS_MESSAGE = "entire index insertions ";
 
-    public static final String ENTIRE_INSERTIONS_MESSAGE = "\nEntire index insertions ";
-    public static final String SINGLE_INSERTION_MESSAGE = "Index insertion number ";
     public static final String INSERTION_FILES_DIRECTORY = "insertionFiles";
 
 

@@ -26,37 +26,27 @@ abstract public class Experiment {
     protected final int NUMBER_OF_WORDS_TO_QUERY = 50;
 
     protected PrintWriter tlog = null;
-    protected final int inputScale;
     protected final String allIndexesDirectory;
     protected final ScalingCases scalingCases;
     protected final WordsRandomizer wordsRandomizer;
     protected final ResultsWriter resultsWriter;
-    protected final ResultsVerifier resultsVerifier;
-    private final boolean shouldVerify;
     @SuppressWarnings("unused")
     final String indexParentDirectory;
 
     public Experiment(String localDir,
-                      String indexDirectoryName,
-                      int inputScale,
-                      boolean shouldVerify) {
+                      String indexDirectoryName) {
         this.indexParentDirectory = localDir;
         this.allIndexesDirectory = indexDirectoryName;
-        this.inputScale = inputScale;
-        this.scalingCases = new ScalingCases(this.inputScale);
+        this.scalingCases = new ScalingCases();
         this.resultsWriter = new ResultsWriter();
-        this.wordsRandomizer = new WordsRandomizer(allIndexesDirectory, inputScale);
-        this.resultsVerifier = new ResultsVerifier(localDir, allIndexesDirectory, inputScale);
-        this.shouldVerify = shouldVerify;
+        this.wordsRandomizer = new WordsRandomizer(indexDirectoryName);
     }
     public abstract void runExperiment();
 
     protected void queryAfterBuildIndex(IndexReader indexReader, IndexWriter indexWriter) {
-        tlog.println("===== After Build/Merge... =====");
         testWordQueriesOnAverage(indexReader,
                 indexWriter,
                 wordsRandomizer.getRandomWords(NUMBER_OF_WORDS_TO_QUERY));
-        testMetaData(indexReader);
     }
 
     protected IndexReader doInsertions(IndexWriter indexWriter) {
@@ -135,12 +125,6 @@ abstract public class Experiment {
         PrintingTool.printList(wordTestCases);
         for (String word : wordTestCases) {
             Map<Integer, Integer> resultedPostingsList = indexReader.getReviewsWithToken(word, indexWriter);
-            if (this.shouldVerify) {
-                resultsVerifier.verifySingleQuery(word,
-                        wordsRandomizer.getWordNumber(word),
-                        resultedPostingsList,
-                        indexWriter.getNumberOfReviewsIndexed());
-            }
         }
         resultsWriter.addToElapsedQueryTimeList(startTime, wordTestCases.size());
         resultsWriter.addToIndexDiskSize(getAllIndexSize());
@@ -191,7 +175,6 @@ abstract public class Experiment {
         }
         tlog.println("=======================================");
         tlog.println(experimentType);
-        tlog.println("Review Scale: E" + scalingCases.getTestType());
         tlog.println("=======================================");
         logDateAndTime();
     }
