@@ -2,14 +2,14 @@
 An academic project about indexing big data where the data can change.  
 
 To run the code:
-1. Extract the E4.jar file on your machine (this will create a directory with the name ‘E4’):
-  jar xf E4.jar
-2. Enter the directory created:
-  cd E4
-3. Compile the source code:
-  javac dynamic_index/*.java
-5. Run:
-  java -Xmx1G -Xms1G dynamic_index/Main
+1. Extract the E4.jar file on your machine (this will create a directory with the name ‘E4’):  
+jar xf E4.jar
+2. Enter the directory created:  
+cd E4
+3. Compile the source code:  
+javac dynamic_index/*.java
+5. Run:  
+java -Xmx1G -Xms1G dynamic_index/Main
 
 The project was done as part of a course titled 'Web Information Retreival' - aka index building aka search engines - as part of my bachelor's degree in Computer Science in The Hebrew University of Jerusalem.
 In the course we learned about different aspects of search engines and I chose to test two different methods of building and keeping an index that changes contantly.
